@@ -2,8 +2,11 @@
 
 #include <common.h>
 
+
+class Cart;
+class Cpu;
+
 class Emu {
-public:
 
 	struct EmuContext {
 		bool _paused;
@@ -11,9 +14,19 @@ public:
 		u64 _ticks;
 	};
 
-	s32 emuRun(s32 argc, char** argv);
-private:
+public:
+	Emu();
+	~Emu();
 
-	EmuContext* emuGetContext;
+	void initialize();
+	void terminate();
+
+	s32 emuRun(s32 argc, char** argv);
+	EmuContext* getEmuContext();
+private:
+	// Cart* cart;
+	EmuContext* _emuContext;
+	Cpu* _cpu;
+	Cart* _cart;
 };
 

@@ -2,9 +2,8 @@
 
 #include <common.h>
 
-class Cpu {
+class Timer {
 public:
 	void initialize();
-	bool step();
+	void tick();
 };
-

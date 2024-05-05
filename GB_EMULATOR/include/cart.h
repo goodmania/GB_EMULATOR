@@ -22,8 +22,9 @@ public:
 		u16 _globalCheckSum;
 	};
 
+	void initialize();
 	bool cartLoad(char* cart);
-
+	
 private:
 	const char* cartLicName();
 	const char* cartTypeName();

@@ -1,5 +1,6 @@
-#include <stdio.h>
+#include "emu.h"
 
-int main() {
-	printf("Hello world");
+int main(int argc, char** argv) {
+	Emu emu;
+	emu.emuRun(argc, argv);
 }

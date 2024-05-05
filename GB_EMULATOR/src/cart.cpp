@@ -115,10 +115,16 @@ static std::map<u32, const char*> LIC_CODE = {
 };
 }
 
+void Cart::initialize()
+{
+
+}
+
 bool Cart::cartLoad(char* cart)
 {
     snprintf(ctx._filename, sizeof(ctx._filename), "%s", cart);
-    FILE* fp = fopen(cart, "r");
+    FILE* fp = nullptr;
+    fopen_s(&fp, cart, "r");
 
     if (!fp)
     {
