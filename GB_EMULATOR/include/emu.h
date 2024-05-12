@@ -2,7 +2,6 @@
 
 #include <common.h>
 
-
 class Cart;
 class Cpu;
 
@@ -23,8 +22,9 @@ public:
 
 	s32 emuRun(s32 argc, char** argv);
 	EmuContext* getEmuContext();
+	void emuCycles(s32 cpuCycles);
+
 private:
-	// Cart* cart;
 	EmuContext* _emuContext;
 	Cpu* _cpu;
 	Cart* _cart;

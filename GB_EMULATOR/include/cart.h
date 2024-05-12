@@ -2,6 +2,13 @@
 
 #include <common.h>
 
+struct CartContext {
+	char _filename[1024];
+	u32 _romSize;
+	u8* _romData;
+	Cart::RomHeader* _header;
+};
+
 class Cart {
 public:
 
@@ -24,8 +31,11 @@ public:
 
 	void initialize();
 	bool cartLoad(char* cart);
-	
+	u8 read(u16 address);
+	void write(u16 address, u8 value);
 private:
 	const char* cartLicName();
 	const char* cartTypeName();
+
+	CartContext _context;
 };

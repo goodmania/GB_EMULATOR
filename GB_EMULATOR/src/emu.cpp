@@ -22,8 +22,8 @@ Emu::~Emu()
 void Emu::initialize()
 {
     _emuContext = new EmuContext;
-    _cpu = new Cpu;
     _cart = new Cart;
+    _cpu = new Cpu;
 
     if (_emuContext)
     {
@@ -81,4 +81,15 @@ s32 Emu::emuRun(s32 argc, char** argv) {
     }
 
     return 0;
+}
+
+void Emu::emuCycles(s32 cpuCycles) {
+    for (s32 i = 0; i < cpuCycles; i++) {
+        for (s32 n = 0; n < 4; n++) {
+            _emuContext->_ticks++;
+            // timer_tick();
+            // ppu_tick();
+        }
+        // dma_tick();
+    }
 }

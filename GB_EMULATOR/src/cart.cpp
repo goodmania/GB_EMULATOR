@@ -3,15 +3,6 @@
 
 namespace{
 
-struct CartContext {
-	char _filename[1024];
-	u32 _romSize;
-	u8* _romData;
-	Cart::RomHeader* _header;
-};
-
-static CartContext ctx;
-
 static const char* ROM_TYPES[] = {
     "ROM ONLY",
     "MBC1",
@@ -113,7 +104,7 @@ static std::map<u32, const char*> LIC_CODE = {
     {0x99, "Pack in soft"},
     {0xA4, "Konami (Yu-Gi-Oh!)"},
 };
-}
+} // namespace
 
 void Cart::initialize()
 {
@@ -122,7 +113,7 @@ void Cart::initialize()
 
 bool Cart::cartLoad(char* cart)
 {
-    snprintf(ctx._filename, sizeof(ctx._filename), "%s", cart);
+    snprintf(_context._filename, sizeof(_context._filename), "%s", cart);
     FILE* fp = nullptr;
     fopen_s(&fp, cart, "r");
 
@@ -132,49 +123,62 @@ bool Cart::cartLoad(char* cart)
         return false;
     }
 
-    printf("Opened: %s\n", ctx._filename);
+    printf("Opened: %s\n", _context._filename);
 
     fseek(fp, 0, SEEK_END); // move file pointer to the end
-    ctx._romSize = ftell(fp); // get the current position of the file pointer
+    _context._romSize = ftell(fp); // get the current position of the file pointer
     rewind(fp); // move the file pointer back to the beginning
 
-    ctx._romData = new u8[ctx._romSize]; // todo : delete
-    fread(ctx._romData, ctx._romSize, 1, fp);
+    _context._romData = new u8[_context._romSize]; // todo : delete
+    fread(_context._romData, _context._romSize, 1, fp);
     fclose(fp);
 
-    ctx._header = (Cart::RomHeader*)(ctx._romData + 0x100);
-    ctx._header->_title[15] = 0;
+    _context._header = (Cart::RomHeader*)(_context._romData + 0x100);
+    _context._header->_title[15] = 0;
 
     printf("Cartridge Loaded:\n");
-    printf("\t Title    : %s\n", ctx._header->_title);
-    printf("\t Type     : %2.2X (%s)\n", ctx._header->_type, cartTypeName());
-    printf("\t ROM Size : %d KB\n", 32 << ctx._header->_romSize);
-    printf("\t RAM Size : %2.2X\n", ctx._header->_ramSize);
-    printf("\t LIC Code : %2.2X (%s)\n", ctx._header->_licCode, cartLicName());
-    printf("\t ROM Vers : %2.2X\n", ctx._header->_version);
+    printf("\t Title    : %s\n", _context._header->_title);
+    printf("\t Type     : %2.2X (%s)\n", _context._header->_type, cartTypeName());
+    printf("\t ROM Size : %d KB\n", 32 << _context._header->_romSize);
+    printf("\t RAM Size : %2.2X\n", _context._header->_ramSize);
+    printf("\t LIC Code : %2.2X (%s)\n", _context._header->_licCode, cartLicName());
+    printf("\t ROM Vers : %2.2X\n", _context._header->_version);
 
     u16 x = 0;
     for (u16 i = 0x0134; i <= 0x014C; i++) {
-        x = x - ctx._romData[i] - 1;
+        x = x - _context._romData[i] - 1;
     }
 
-    printf("\t Checksum : %2.2X (%s)\n", ctx._header->_checkSum, (x & 0xFF) ? "PASSED" : "FAILED");
+    printf("\t Checksum : %2.2X (%s)\n", _context._header->_checkSum, (x & 0xFF) ? "PASSED" : "FAILED");
 
     return true;
 }
 
+u8 Cart::read(u16 address)
+{
+    //for now just ROM ONLY type supported...
+
+    return _context._romData[address];
+}
+
+void Cart::write(u16 address, u8 value)
+{
+    //for now, ROM ONLY...
+    NO_IMPL
+}
+
 const char* Cart::cartLicName()
 {
-    if (ctx._header->_newLicCode <= 0xA4) {
-        return LIC_CODE[ctx._header->_licCode];
+    if (_context._header->_newLicCode <= 0xA4) {
+        return LIC_CODE[_context._header->_licCode];
     }
     return "UNKNOWN";
 }
 
 const char* Cart::cartTypeName()
 {
-    if (ctx._header->_type <= 0x22) {
-        return ROM_TYPES[ctx._header->_type];
+    if (_context._header->_type <= 0x22) {
+        return ROM_TYPES[_context._header->_type];
     }
     return "UNKNOWN";
 }
