@@ -133,7 +133,7 @@ bool Cart::cartLoad(char* cart)
     fread(_context._romData, _context._romSize, 1, fp);
     fclose(fp);
 
-    _context._header = (Cart::RomHeader*)(_context._romData + 0x100);
+    _context._header = (RomHeader*)(_context._romData + 0x100);
     _context._header->_title[15] = 0;
 
     printf("Cartridge Loaded:\n");

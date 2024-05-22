@@ -29,4 +29,3 @@ private:
 	Cpu* _cpu;
 	Cart* _cart;
 };
-

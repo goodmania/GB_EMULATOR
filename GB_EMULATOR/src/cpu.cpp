@@ -2,7 +2,6 @@
 #include "cpu.h"
 #include "timer.h"
 #include "bus.h"
-#include "stack.h"
 
 namespace {
 
@@ -31,6 +30,11 @@ namespace {
     bool is16Bit(RegisterType rt) {
         return rt >= RT_AF;
     }
+
+#if CPU_DEBUG
+    static char DEBUG_msg[1024] = { 0 };
+    static int msgSize = 0;
+#endif
 };
 
 Cpu::Cpu(Bus& bus, Timer& timer, Emu& emu) {
@@ -39,6 +43,7 @@ Cpu::Cpu(Bus& bus, Timer& timer, Emu& emu) {
     _emu = &emu;
     assert(_bus != nullptr);
     assert(_timer != nullptr);
+    assert(_emu != nullptr);
 }
 
 void Cpu::initialize()
@@ -59,41 +64,41 @@ void Cpu::initialize()
 
 void Cpu::initializeProcessors()
 {
-    _processors[IN_NONE] = Cpu::procNone;
-    _processors[IN_NOP] = Cpu::procNop;
-    _processors[IN_LD] = Cpu::procLd;
-    _processors[IN_LDH] = Cpu::procLdh;
-    _processors[IN_JP] = Cpu::procJp;
-    _processors[IN_DI] = Cpu::procDi;
-    _processors[IN_POP] = Cpu::procPop;
-    _processors[IN_PUSH] = Cpu::procPush;
-    _processors[IN_JR] = Cpu::procJr;
-    _processors[IN_CALL] = Cpu::procCall;
-    _processors[IN_RET] = Cpu::procRet;
-    _processors[IN_RST] = Cpu::procRst;
-    _processors[IN_DEC] = Cpu::procDec;
-    _processors[IN_INC] = Cpu::procInc;
-    _processors[IN_ADD] = Cpu::procAdd;
-    _processors[IN_ADC] = Cpu::procAdc;
-    _processors[IN_SUB] = Cpu::procSub;
-    _processors[IN_SBC] = Cpu::procSbc;
-    _processors[IN_AND] = Cpu::procAnd;
-    _processors[IN_XOR] = Cpu::procXor;
-    _processors[IN_OR] = Cpu::procOr;
-    _processors[IN_CP] = Cpu::procCp;
-    _processors[IN_CB] = Cpu::procCb;
-    _processors[IN_RRCA] = Cpu::procRrca;
-    _processors[IN_RLCA] = Cpu::procRlca;
-    _processors[IN_RRA] = Cpu::procRra;
-    _processors[IN_RLA] = Cpu::procRla;
-    _processors[IN_STOP] = Cpu::procStop;
-    _processors[IN_HALT] = Cpu::procHalt;
-    _processors[IN_DAA] = Cpu::procDaa;
-    _processors[IN_CPL] = Cpu::procCpl;
-    _processors[IN_SCF] = Cpu::procScf;
-    _processors[IN_CCF] = Cpu::procCcf;
-    _processors[IN_EI] = Cpu::procEi;
-    _processors[IN_RETI] = Cpu::procReti;
+    _processors[IN_NONE] = &Cpu::procNone;
+    _processors[IN_NOP] = &Cpu::procNop;
+    _processors[IN_LD] = &Cpu::procLd;
+    _processors[IN_LDH] = &Cpu::procLdh;
+    _processors[IN_JP] = &Cpu::procJp;
+    _processors[IN_DI] = &Cpu::procDi;
+    _processors[IN_POP] = &Cpu::procPop;
+    _processors[IN_PUSH] = &Cpu::procPush;
+    _processors[IN_JR] = &Cpu::procJr;
+    _processors[IN_CALL] = &Cpu::procCall;
+    _processors[IN_RET] = &Cpu::procRet;
+    _processors[IN_RST] = &Cpu::procRst;
+    _processors[IN_DEC] = &Cpu::procDec;
+    _processors[IN_INC] = &Cpu::procInc;
+    _processors[IN_ADD] = &Cpu::procAdd;
+    _processors[IN_ADC] = &Cpu::procAdc;
+    _processors[IN_SUB] = &Cpu::procSub;
+    _processors[IN_SBC] = &Cpu::procSbc;
+    _processors[IN_AND] = &Cpu::procAnd;
+    _processors[IN_XOR] = &Cpu::procXor;
+    _processors[IN_OR] = &Cpu::procOr;
+    _processors[IN_CP] = &Cpu::procCp;
+    _processors[IN_CB] = &Cpu::procCb;
+    _processors[IN_RRCA] = &Cpu::procRrca;
+    _processors[IN_RLCA] = &Cpu::procRlca;
+    _processors[IN_RRA] = &Cpu::procRra;
+    _processors[IN_RLA] = &Cpu::procRla;
+    _processors[IN_STOP] = &Cpu::procStop;
+    _processors[IN_HALT] = &Cpu::procHalt;
+    _processors[IN_DAA] = &Cpu::procDaa;
+    _processors[IN_CPL] = &Cpu::procCpl;
+    _processors[IN_SCF] = &Cpu::procScf;
+    _processors[IN_CCF] = &Cpu::procCcf;
+    _processors[IN_EI] = &Cpu::procEi;
+    _processors[IN_RETI] = &Cpu::procReti;
 }
 
 void Cpu::execute() {
@@ -103,7 +108,25 @@ void Cpu::execute() {
         NO_IMPL
     }
 
-    proc(&_context);
+    (this->*proc)(&_context);
+}
+
+void Cpu::DEBUG_update()
+{
+    if (_bus->busRead(0xFF02) == 0x81) {
+        char c = _bus->busRead(0xFF01);
+
+        DEBUG_msg[msgSize++] = c;
+
+        _bus->busWrite(0xFF02, 0);
+    }
+}
+
+void Cpu::DEBUG_print()
+{
+    if (DEBUG_msg[0]) {
+        printf("DBG: %s\n", DEBUG_msg);
+    }
 }
 
 IN_PROC Cpu::getProcessorByInstructionType(InstructionType& instType)
@@ -115,21 +138,58 @@ bool Cpu::step()
 {
     if (!_context._halted) {
         u16 pc = _context._regs._pc;
-        Instruction* instruction = _context._curInst;
+
         fetchInstruction();
+        _emu->emuCycles(1);
         fetchData();
 
-        printf("%04X: %-7s (%02X %02X %02X) A: %02X B: %02X C: %02X\n",
-            pc, getInstructionName(_context._curInst->_instType), _context._curOpcode,
-            _bus->busRead(pc + 1), _bus->busRead(pc + 2), _context._regs._a, _context._regs._b, _context._regs._c);
+#if CPU_DEBUG
+        char flags[16];
+        sprintf(flags, "%c%c%c%c",
+            _context._regs._f & (1 << 7) ? 'Z' : '-',
+            _context._regs._f & (1 << 6) ? 'N' : '-',
+            _context._regs._f & (1 << 5) ? 'H' : '-',
+            _context._regs._f & (1 << 4) ? 'C' : '-'
+        );
 
-        if (_context._curInst == NULL) {
+        char inst[16];
+        instructionToStr(&_context, inst);
+
+        printf("%08lX - %04X: %-12s (%02X %02X %02X) A: %02X F: %s BC: %02X%02X DE: %02X%02X HL: %02X%02X\n",
+            _emu->getEmuContext()->_ticks,
+            pc, inst, _context._curOpcode,
+            _bus->busRead(pc + 1), _bus->busRead(pc + 2), _context._regs._a, flags, _context._regs._b, _context._regs._c,
+            _context._regs._d, _context._regs._e, _context._regs._h, _context._regs._l);
+#endif
+
+        if (!_context._curInst) {
             printf("Unknown Instruction! %02X\n", _context._curOpcode);
             exit(-7);
         }
 
+        DEBUG_update();
+        DEBUG_print();
+
         execute();
     }
+    else {
+        //is halted...
+        _emu->emuCycles(1);
+
+        if (_context._intFlags) {
+            _context._halted = false;
+        }
+    }
+
+    if (_context._intMasterEnabled) {
+        handleInterrupts(&_context);
+        _context._enablingIme = false;
+    }
+
+    if (_context._enablingIme) {
+        _context._intMasterEnabled = true;
+    }
+
     return true;
 }
 
@@ -494,7 +554,7 @@ void Cpu::gotoAddr(CpuContext* ctx, u16 addr, bool pushpc) {
     if (checkCond(ctx)) {
         if (pushpc) {
             _emu->emuCycles(2);
-            stack_push16(ctx->_regs._pc);
+            stackPush16(ctx->_regs._pc);
         }
 
         ctx->_regs._pc = addr;
@@ -526,9 +586,9 @@ void Cpu::procRet(CpuContext* ctx) {
     }
 
     if (checkCond(ctx)) {
-        u16 lo = stack_pop();
+        u16 lo = stackPop();
         _emu->emuCycles(1);
-        u16 hi = stack_pop();
+        u16 hi = stackPop();
         _emu->emuCycles(1);
 
         u16 n = (hi << 8) | lo;
@@ -544,9 +604,9 @@ void Cpu::procReti(CpuContext* ctx) {
 }
 
 void Cpu::procPop(CpuContext* ctx) {
-    u16 lo = stack_pop();
+    u16 lo = stackPop();
     _emu->emuCycles(1);
-    u16 hi = stack_pop();
+    u16 hi = stackPop();
     _emu->emuCycles(1);
 
     u16 n = (hi << 8) | lo;
@@ -561,11 +621,11 @@ void Cpu::procPop(CpuContext* ctx) {
 void Cpu::procPush(CpuContext* ctx) {
     u16 hi = (readRegister(ctx->_curInst->_regType0) >> 8) & 0xFF;
     _emu->emuCycles(1);
-    stack_push(hi);
+    stackPush(hi);
 
     u16 lo = readRegister(ctx->_curInst->_regType0) & 0xFF;
     _emu->emuCycles(1);
-    stack_push(lo);
+    stackPush(lo);
 
     _emu->emuCycles(1);
 }
@@ -740,6 +800,36 @@ void Cpu::setRegister(RegisterType rt, u16 val)
     }
 }
 
+u8 Cpu::getIeRegister()
+{
+    return _context._ieRegister;
+}
+
+void Cpu::setIeRegister(u8 n)
+{
+    _context._ieRegister = n;
+}
+
+u8 Cpu::readRegister8(RegisterType rt)
+{
+    switch (rt) {
+    case RT_A: return _context._regs._a;
+    case RT_F: return _context._regs._f;
+    case RT_B: return _context._regs._b;
+    case RT_C: return _context._regs._c;
+    case RT_D: return _context._regs._d;
+    case RT_E: return _context._regs._e;
+    case RT_H: return _context._regs._h;
+    case RT_L: return _context._regs._l;
+    case RT_HL: {
+        return _bus->busRead(readRegister(RT_HL));
+    }
+    default:
+        printf("**ERR INVALID REG8: %d\n", rt);
+        NO_IMPL
+    }
+}
+
 void Cpu::setRegister8(RegisterType rt, u8 val) {
     switch (rt) {
     case RT_A: _context._regs._a = val & 0xFF; break;
@@ -754,5 +844,263 @@ void Cpu::setRegister8(RegisterType rt, u8 val) {
     default:
         printf("**ERR INVALID REG8: %d\n", rt);
         NO_IMPL
+    }
+}
+
+u8 Cpu::getIntFlags()
+{
+    return _context._intFlags;
+}
+
+void Cpu::setIntFlags(u8 value)
+{
+    _context._intFlags = value;
+}
+
+void Cpu::instructionToStr(CpuContext* ctx, char* str)
+{
+    Instruction* inst = ctx->_curInst;
+    sprintf(str, "%s ", getInstructionName(inst->_instType));
+
+    switch (inst->_addrMode) {
+    case AM_IMP:
+        return;
+
+    case AM_R_D16:
+    case AM_R_A16:
+        sprintf(str, "%s %s,$%04X", getInstructionName(inst->_instType),
+            registerTypeTable[inst->_regType0], ctx->_fetchedData);
+        return;
+
+    case AM_R:
+        sprintf(str, "%s %s", getInstructionName(inst->_instType),
+            registerTypeTable[inst->_regType0]);
+        return;
+
+    case AM_R_R:
+        sprintf(str, "%s %s,%s", getInstructionName(inst->_instType),
+            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+        return;
+
+    case AM_MR_R:
+        sprintf(str, "%s (%s),%s", getInstructionName(inst->_instType),
+            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+        return;
+
+    case AM_MR:
+        sprintf(str, "%s (%s)", getInstructionName(inst->_instType),
+            registerTypeTable[inst->_regType0]);
+        return;
+
+    case AM_R_MR:
+        sprintf(str, "%s %s,(%s)", getInstructionName(inst->_instType),
+            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+        return;
+
+    case AM_R_D8:
+    case AM_R_A8:
+        sprintf(str, "%s %s,$%02X", getInstructionName(inst->_instType),
+            registerTypeTable[inst->_regType0], ctx->_fetchedData & 0xFF);
+        return;
+
+    case AM_R_HLI:
+        sprintf(str, "%s %s,(%s+)", getInstructionName(inst->_instType),
+            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+        return;
+
+    case AM_R_HLD:
+        sprintf(str, "%s %s,(%s-)", getInstructionName(inst->_instType),
+            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+        return;
+
+    case AM_HLI_R:
+        sprintf(str, "%s (%s+),%s", getInstructionName(inst->_instType),
+            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+        return;
+
+    case AM_HLD_R:
+        sprintf(str, "%s (%s-),%s", getInstructionName(inst->_instType),
+            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+        return;
+
+    case AM_A8_R:
+        sprintf(str, "%s $%02X,%s", getInstructionName(inst->_instType),
+            _bus->busRead(ctx->_regs._pc - 1), registerTypeTable[inst->_regType1]);
+        return;
+
+    case AM_HL_SPR:
+        sprintf(str, "%s (%s),SP+%d", getInstructionName(inst->_instType),
+            registerTypeTable[inst->_regType0], ctx->_fetchedData & 0xFF);
+        return;
+
+    case AM_D8:
+        sprintf(str, "%s $%02X", getInstructionName(inst->_instType),
+            ctx->_fetchedData & 0xFF);
+        return;
+
+    case AM_D16:
+        sprintf(str, "%s $%04X", getInstructionName(inst->_instType),
+            ctx->_fetchedData);
+        return;
+
+    case AM_MR_D8:
+        sprintf(str, "%s (%s),$%02X", getInstructionName(inst->_instType),
+            registerTypeTable[inst->_regType0], ctx->_fetchedData & 0xFF);
+        return;
+
+    case AM_A16_R:
+        sprintf(str, "%s ($%04X),%s", getInstructionName(inst->_instType),
+            ctx->_fetchedData, registerTypeTable[inst->_regType1]);
+        return;
+
+    default:
+        fprintf(stderr, "INVALID AM: %d\n", inst->_addrMode);
+        NO_IMPL
+    }
+}
+
+// stack
+/*
+    STACK
+
+    SP=0xDFFF
+
+    MEMORY:
+    0xDFF7: 00
+    0xDFF8: 00
+    0xDFF9: 00
+    0xDFFA: 00
+    0xDFFB: 00
+    0xDFFC: 00
+    0xDFFD: 00
+    0xDFFE: 00
+    0xDFFF: 00 <- SP
+
+    PUSH 0x55
+
+    SP-- = 0xDFFE
+    MEMORY[0xDFFE] = 0x55
+
+    MEMORY:
+    0xDFF7: 00
+    0xDFF8: 00
+    0xDFF9: 00
+    0xDFFA: 00
+    0xDFFB: 00
+    0xDFFC: 00
+    0xDFFD: 00
+    0xDFFE: 55 <- SP
+    0xDFFF: 00
+
+    PUSH 0x77
+
+    SP-- = 0xDFFD
+    MEMORY[0xDFFD] = 0x77
+
+    MEMORY:
+    0xDFF7: 00
+    0xDFF8: 00
+    0xDFF9: 00
+    0xDFFA: 00
+    0xDFFB: 00
+    0xDFFC: 00
+    0xDFFD: 77 <- SP
+    0xDFFE: 55
+    0xDFFF: 00
+
+    val = POP
+
+    val = MEMORY[0xDFFD] = 0x77
+    SP++ = 0xDFFE
+
+    MEMORY:
+    0xDFF7: 00
+    0xDFF8: 00
+    0xDFF9: 00
+    0xDFFA: 00
+    0xDFFB: 00
+    0xDFFC: 00
+    0xDFFD: 77
+    0xDFFE: 55 <- SP
+    0xDFFF: 00
+
+
+    PUSH 0x88
+
+    SP-- = 0xDFFD
+    MEMORY[0xDFFD] = 0x88
+
+    MEMORY:
+    0xDFF7: 00
+    0xDFF8: 00
+    0xDFF9: 00
+    0xDFFA: 00
+    0xDFFB: 00
+    0xDFFC: 00
+    0xDFFD: 88 <- SP
+    0xDFFE: 55
+    0xDFFF: 00
+*/
+
+void Cpu::stackPush(u8 data) {
+    _context._regs._sp--;
+    _bus->busWrite(_context._regs._sp, data);
+}
+
+void Cpu::stackPush16(u16 data) {
+    stackPush((data >> 8) & 0xFF);
+    stackPush(data & 0xFF);
+}
+
+u8 Cpu::stackPop() {
+    return _bus->busRead(_context._regs._sp++);
+}
+
+u16 Cpu::stackPop16() {
+    u16 lo = stackPop();
+    u16 hi = stackPop();
+
+    return (hi << 8) | lo;
+}
+
+// interrupt
+void Cpu::interruptHandle(CpuContext* ctx, u16 address) {
+     stackPush16(ctx->_regs._pc);
+     ctx->_regs._pc = address;
+}
+
+bool Cpu::interruptCheck(CpuContext* ctx, u16 address, InterruptType it) {
+    if (ctx->_intFlags & it && ctx->_ieRegister & it) {
+        interruptHandle(ctx, address);
+        ctx->_intFlags &= ~it;
+        ctx->_halted = false;
+        ctx->_intMasterEnabled = false;
+
+        return true;
+    }
+    return false;
+}
+
+void Cpu::requestInterrupt(InterruptType t)
+{
+    _context._intFlags |= t;
+}
+
+void Cpu::handleInterrupts(CpuContext* ctx)
+{
+    if (interruptCheck(ctx, 0x40, IT_VBLANK)) {
+
+    }
+    else if (interruptCheck(ctx, 0x48, IT_LCD_STAT)) {
+
+    }
+    else if (interruptCheck(ctx, 0x50, IT_TIMER)) {
+
+    }
+    else if (interruptCheck(ctx, 0x58, IT_SERIAL)) {
+
+    }
+    else if (interruptCheck(ctx, 0x60, IT_JOYPAD)) {
+
     }
 }

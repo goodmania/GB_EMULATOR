@@ -39,11 +39,40 @@ void Timer::tick()
     }
 }
 
-void Timer::write(u16 address, u8 value)
-{
+void Timer::write(u16 address, u8 value) {
+    switch (address) {
+    case 0xFF04:
+        //DIV
+        _context._div = 0;
+        break;
+
+    case 0xFF05:
+        //TIMA
+        _context._tima = value;
+        break;
+
+    case 0xFF06:
+        //TMA
+        _context._tma = value;
+        break;
+
+    case 0xFF07:
+        //TAC
+        _context._tac = value;
+        break;
+    }
 }
 
 u8 Timer::read(u16 address)
 {
-	return u8();
+    switch (address) {
+    case 0xFF04:
+        return _context._div >> 8;
+    case 0xFF05:
+        return _context._tima;
+    case 0xFF06:
+        return _context._tma;
+    case 0xFF07:
+        return _context._tac;
+    }
 }

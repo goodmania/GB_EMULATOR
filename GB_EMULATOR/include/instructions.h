@@ -1,6 +1,6 @@
 #pragma once
 
-#include <common.h>
+#include "common.h"
 
 enum AddressingMode{
     AM_IMP,
@@ -122,6 +122,6 @@ struct Instruction {
     u8 _param;
 };
 
-static void initializeInstructions();
-static Instruction* getInstructionByOpcode(u8 opcode);
-const char* getInstructionName(InstructionType t);
+void initializeInstructions();
+extern Instruction* getInstructionByOpcode(u8 opcode);
+extern const char* getInstructionName(InstructionType t);

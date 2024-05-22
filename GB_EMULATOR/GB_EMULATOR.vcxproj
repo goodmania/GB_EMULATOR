@@ -162,7 +162,6 @@ xcopy "$(SolutionDir)external\SDL2_TTF\lib\$(PlatformTarget)\*.dll" "$(OutDir)" 
     <ClCompile Include="src\emu.cpp" />
     <ClCompile Include="src\instructions.cpp" />
     <ClCompile Include="src\interrupt.cpp" />
-    <ClCompile Include="src\stack.cpp" />
     <ClCompile Include="src\timer.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -173,7 +172,6 @@ xcopy "$(SolutionDir)external\SDL2_TTF\lib\$(PlatformTarget)\*.dll" "$(OutDir)" 
     <ClInclude Include="include\emu.h" />
     <ClInclude Include="include\instructions.h" />
     <ClInclude Include="include\interrupt.h" />
-    <ClInclude Include="include\stack.h" />
     <ClInclude Include="include\timer.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

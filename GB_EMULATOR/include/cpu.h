@@ -4,10 +4,22 @@
 #include "common.h"
 #include "instructions.h"
 
+#define CPU_DEBUG 1
+
 class Emu;
 class Timer;
 class Bus;
-typedef void (*IN_PROC)(CpuContext*);
+class Cpu;
+struct CpuContext;
+typedef void (Cpu::* IN_PROC)(CpuContext*);
+
+enum InterruptType : u8{
+    IT_VBLANK =     1 << 0,
+    IT_LCD_STAT =   1 << 1,
+    IT_TIMER =      1 << 2,
+    IT_SERIAL =     1 << 3,
+    IT_JOYPAD =     1 << 4,
+} ;
 
 struct CpuRegisters {
     u8 _a;
@@ -90,7 +102,6 @@ public:
     void procAdc(CpuContext* ctx);
     void procAdd(CpuContext* ctx);
     void procSbc(CpuContext* ctx);
-    void procAdc(CpuContext* ctx);
 
     void setFlags(CpuContext* ctx, s8 z, s8 n, s8 h, s8 c);
     bool checkCond(CpuContext* ctx);
@@ -99,24 +110,37 @@ public:
     u16 readRegister(RegisterType rt);
     void setRegister(RegisterType rt, u16 val);
 
-    u8 cpu_get_ie_register();
-    void cpu_set_ie_register(u8 n);
+    u8 getIeRegister();
+    void setIeRegister(u8 n);
 
     u8 readRegister8(RegisterType rt);
     void setRegister8(RegisterType rt, u8 val);
 
-    u8 cpu_get_int_flags();
-    void cpu_set_int_flags(u8 value);
+    u8 getIntFlags();
+    void setIntFlags(u8 value);
 
-    void inst_to_str(RegisterType* ctx, char* str);
+    void instructionToStr(CpuContext* ctx, char* str);
+
+    void stackPush(u8 data);
+    void stackPush16(u16 data);
+    u8 stackPop();
+    u16 stackPop16();
+
+    void requestInterrupt(InterruptType t);
+    void handleInterrupts(CpuContext* ctx);
 
 private:
+    void interruptHandle(CpuContext* ctx, u16 address);
+    bool interruptCheck(CpuContext* ctx, u16 address, InterruptType it);
+
     void initializeProcessors();
     void fetchInstruction();
     void fetchData();
     void execute();
-    
-
+#if CPU_DEBUG
+    void DEBUG_update();
+    void DEBUG_print();
+#endif
     IN_PROC getProcessorByInstructionType(InstructionType& instType);
 
     CpuContext _context;
