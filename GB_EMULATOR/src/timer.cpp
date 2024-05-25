@@ -1,4 +1,11 @@
 #include "timer.h"
+#include "emu.h"
+#include "cpu.h"
+
+Timer::Timer()
+{
+    initialize();
+}
 
 void Timer::initialize()
 {
@@ -33,8 +40,7 @@ void Timer::tick()
 
         if (_context._tima == 0xFF) {
             _context._tima = _context._tma;
-
-            cpu_request_interrupt(IT_TIMER);
+            EmuGet()->getCpu()->requestInterrupt(IT_TIMER);
         }
     }
 }

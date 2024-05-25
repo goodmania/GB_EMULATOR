@@ -1,7 +1,7 @@
 #include "emu.h"
 #include "cpu.h"
 #include "timer.h"
-#include "bus.h"
+#include "cart.h"
 
 namespace {
 
@@ -37,14 +37,7 @@ namespace {
 #endif
 };
 
-Cpu::Cpu(Bus& bus, Timer& timer, Emu& emu) {
-    _bus = &bus;
-    _timer = &timer;
-    _emu = &emu;
-    assert(_bus != nullptr);
-    assert(_timer != nullptr);
-    assert(_emu != nullptr);
-}
+Cpu::Cpu() {}
 
 void Cpu::initialize()
 {
@@ -58,7 +51,7 @@ void Cpu::initialize()
     _context._intFlags = 0;
     _context._intMasterEnabled = false;
     _context._enablingIme = false;
-    _timer->getTimerContext()._div = 0xABCC;
+    EmuGet()->getTimer()->getTimerContext()._div = 0xABCC;
     initializeProcessors();
 }
 
@@ -113,12 +106,12 @@ void Cpu::execute() {
 
 void Cpu::DEBUG_update()
 {
-    if (_bus->busRead(0xFF02) == 0x81) {
-        char c = _bus->busRead(0xFF01);
+    if (EmuGet()->getCart()->busRead(0xFF02) == 0x81) {
+        char c = EmuGet()->getCart()->busRead(0xFF01);
 
         DEBUG_msg[msgSize++] = c;
 
-        _bus->busWrite(0xFF02, 0);
+        EmuGet()->getCart()->busWrite(0xFF02, 0);
     }
 }
 
@@ -140,7 +133,7 @@ bool Cpu::step()
         u16 pc = _context._regs._pc;
 
         fetchInstruction();
-        _emu->emuCycles(1);
+        EmuGet()->emuCycles(1);
         fetchData();
 
 #if CPU_DEBUG
@@ -156,9 +149,9 @@ bool Cpu::step()
         instructionToStr(&_context, inst);
 
         printf("%08lX - %04X: %-12s (%02X %02X %02X) A: %02X F: %s BC: %02X%02X DE: %02X%02X HL: %02X%02X\n",
-            _emu->getEmuContext()->_ticks,
+            EmuGet()->getEmuContext()->_ticks,
             pc, inst, _context._curOpcode,
-            _bus->busRead(pc + 1), _bus->busRead(pc + 2), _context._regs._a, flags, _context._regs._b, _context._regs._c,
+            EmuGet()->getCart()->busRead(pc + 1), EmuGet()->getCart()->busRead(pc + 2), _context._regs._a, flags, _context._regs._b, _context._regs._c,
             _context._regs._d, _context._regs._e, _context._regs._h, _context._regs._l);
 #endif
 
@@ -174,7 +167,7 @@ bool Cpu::step()
     }
     else {
         //is halted...
-        _emu->emuCycles(1);
+        EmuGet()->emuCycles(1);
 
         if (_context._intFlags) {
             _context._halted = false;
@@ -195,7 +188,7 @@ bool Cpu::step()
 
 void Cpu::fetchInstruction()
 {
-    _context._curOpcode = _bus->busRead(_context._regs._pc++);
+    _context._curOpcode = EmuGet()->getCart()->busRead(_context._regs._pc++);
     _context._curInst = getInstructionByOpcode(_context._curOpcode);
 }
 
@@ -217,17 +210,17 @@ void Cpu::fetchData()
         return;
 
     case AM_R_D8:
-        _context._fetchedData = _bus->busRead(_context._regs._pc);
-        _emu->emuCycles(1);
+        _context._fetchedData = EmuGet()->getCart()->busRead(_context._regs._pc);
+        EmuGet()->emuCycles(1);
         _context._regs._pc++;
         return;
 
     case AM_D16: {
-        u16 lo = _bus->busRead(_context._regs._pc);
-        _emu->emuCycles(1);
+        u16 lo = EmuGet()->getCart()->busRead(_context._regs._pc);
+        EmuGet()->emuCycles(1);
 
-        u16 hi = _bus->busRead(_context._regs._pc + 1);
-        _emu->emuCycles(1);
+        u16 hi = EmuGet()->getCart()->busRead(_context._regs._pc + 1);
+        EmuGet()->emuCycles(1);
 
         _context._fetchedData = lo | (hi << 8);
 
@@ -279,10 +272,10 @@ void Cpu::procCb(CpuContext* ctx) {
     u8 bitOp = (op >> 6) & 0b11;
     u8 regVal = readRegister8(regType);
 
-    _emu->emuCycles(1);
+    EmuGet()->emuCycles(1);
 
     if (regType == RT_HL) {
-        _emu->emuCycles(2);
+        EmuGet()->emuCycles(2);
     }
 
     switch (bitOp) {
@@ -497,14 +490,14 @@ void Cpu::procLd(CpuContext* ctx) {
 
         if (is16Bit(ctx->_curInst->_regType1)) {
             //if 16 bit register...
-            _emu->emuCycles(1);
-            _bus->busWrite16(ctx->_memDest, ctx->_fetchedData);
+            EmuGet()->emuCycles(1);
+            EmuGet()->getCart()->busWrite16(ctx->_memDest, ctx->_fetchedData);
         }
         else {
-            _bus->busWrite(ctx->_memDest, ctx->_fetchedData);
+            EmuGet()->getCart()->busWrite(ctx->_memDest, ctx->_fetchedData);
         }
 
-        _emu->emuCycles(1);
+        EmuGet()->emuCycles(1);
         return;
     }
 
@@ -527,12 +520,12 @@ void Cpu::procLd(CpuContext* ctx) {
 
 void Cpu::procLdh(CpuContext* ctx) {
     if (ctx->_curInst->_regType1 == RT_A) {
-        setRegister(ctx->_curInst->_regType1, _bus->busRead(0xFF00 | ctx->_fetchedData));
+        setRegister(ctx->_curInst->_regType1, EmuGet()->getCart()->busRead(0xFF00 | ctx->_fetchedData));
     }
     else {
-        _bus->busWrite(ctx->_memDest, ctx->_regs._a);
+        EmuGet()->getCart()->busWrite(ctx->_memDest, ctx->_regs._a);
     }
-    _emu->emuCycles(1);
+    EmuGet()->emuCycles(1);
 }
 
 bool Cpu::checkCond(CpuContext* ctx) {
@@ -553,12 +546,12 @@ bool Cpu::checkCond(CpuContext* ctx) {
 void Cpu::gotoAddr(CpuContext* ctx, u16 addr, bool pushpc) {
     if (checkCond(ctx)) {
         if (pushpc) {
-            _emu->emuCycles(2);
+            EmuGet()->emuCycles(2);
             stackPush16(ctx->_regs._pc);
         }
 
         ctx->_regs._pc = addr;
-        _emu->emuCycles(1);
+        EmuGet()->emuCycles(1);
     }
 }
 
@@ -582,19 +575,19 @@ void Cpu::procRst(CpuContext* ctx) {
 
 void Cpu::procRet(CpuContext* ctx) {
     if (ctx->_curInst->_cond != CT_NONE) {
-        _emu->emuCycles(1);
+        EmuGet()->emuCycles(1);
     }
 
     if (checkCond(ctx)) {
         u16 lo = stackPop();
-        _emu->emuCycles(1);
+        EmuGet()->emuCycles(1);
         u16 hi = stackPop();
-        _emu->emuCycles(1);
+        EmuGet()->emuCycles(1);
 
         u16 n = (hi << 8) | lo;
         ctx->_regs._pc = n;
 
-        _emu->emuCycles(1);
+        EmuGet()->emuCycles(1);
     }
 }
 
@@ -605,9 +598,9 @@ void Cpu::procReti(CpuContext* ctx) {
 
 void Cpu::procPop(CpuContext* ctx) {
     u16 lo = stackPop();
-    _emu->emuCycles(1);
+    EmuGet()->emuCycles(1);
     u16 hi = stackPop();
-    _emu->emuCycles(1);
+    EmuGet()->emuCycles(1);
 
     u16 n = (hi << 8) | lo;
 
@@ -620,27 +613,27 @@ void Cpu::procPop(CpuContext* ctx) {
 
 void Cpu::procPush(CpuContext* ctx) {
     u16 hi = (readRegister(ctx->_curInst->_regType0) >> 8) & 0xFF;
-    _emu->emuCycles(1);
+    EmuGet()->emuCycles(1);
     stackPush(hi);
 
     u16 lo = readRegister(ctx->_curInst->_regType0) & 0xFF;
-    _emu->emuCycles(1);
+    EmuGet()->emuCycles(1);
     stackPush(lo);
 
-    _emu->emuCycles(1);
+    EmuGet()->emuCycles(1);
 }
 
 void Cpu::procInc(CpuContext* ctx) {
     u16 val = readRegister(ctx->_curInst->_regType0) + 1;
 
     if (is16Bit(ctx->_curInst->_regType0)) {
-        _emu->emuCycles(1);
+        EmuGet()->emuCycles(1);
     }
 
     if (ctx->_curInst->_regType0 == RT_HL && ctx->_curInst->_addrMode == AM_MR) {
-        val = _bus->busRead(readRegister(RT_HL)) + 1;
+        val = EmuGet()->getCart()->busRead(readRegister(RT_HL)) + 1;
         val &= 0xFF;
-        _bus->busWrite(readRegister(RT_HL), val);
+        EmuGet()->getCart()->busWrite(readRegister(RT_HL), val);
     }
     else {
         setRegister(ctx->_curInst->_regType0, val);
@@ -658,12 +651,12 @@ void Cpu::procDec(CpuContext* ctx) {
     u16 val = readRegister(ctx->_curInst->_regType0) - 1;
 
     if (is16Bit(ctx->_curInst->_regType0)) {
-        _emu->emuCycles(1);
+        EmuGet()->emuCycles(1);
     }
 
     if (ctx->_curInst->_regType0 == RT_HL && ctx->_curInst->_addrMode == AM_MR) {
-        val = _bus->busRead(readRegister(RT_HL)) - 1;
-        _bus->busWrite(readRegister(RT_HL), val);
+        val = EmuGet()->getCart()->busRead(readRegister(RT_HL)) - 1;
+        EmuGet()->getCart()->busWrite(readRegister(RT_HL), val);
     }
     else {
         setRegister(ctx->_curInst->_regType0, val);
@@ -720,7 +713,7 @@ void Cpu::procAdd(CpuContext* ctx) {
     bool is_16bit = is16Bit(ctx->_curInst->_regType0);
 
     if (is_16bit) {
-        _emu->emuCycles(1);
+        EmuGet()->emuCycles(1);
     }
 
     if (ctx->_curInst->_regType0 == RT_SP) {
@@ -822,7 +815,7 @@ u8 Cpu::readRegister8(RegisterType rt)
     case RT_H: return _context._regs._h;
     case RT_L: return _context._regs._l;
     case RT_HL: {
-        return _bus->busRead(readRegister(RT_HL));
+        return EmuGet()->getCart()->busRead(readRegister(RT_HL));
     }
     default:
         printf("**ERR INVALID REG8: %d\n", rt);
@@ -840,7 +833,7 @@ void Cpu::setRegister8(RegisterType rt, u8 val) {
     case RT_E: _context._regs._e = val & 0xFF; break;
     case RT_H: _context._regs._h = val & 0xFF; break;
     case RT_L: _context._regs._l = val & 0xFF; break;
-    case RT_HL: _bus->busWrite(readRegister(RT_HL), val); break;
+    case RT_HL: EmuGet()->getCart()->busWrite(readRegister(RT_HL), val); break;
     default:
         printf("**ERR INVALID REG8: %d\n", rt);
         NO_IMPL
@@ -925,7 +918,7 @@ void Cpu::instructionToStr(CpuContext* ctx, char* str)
 
     case AM_A8_R:
         sprintf(str, "%s $%02X,%s", getInstructionName(inst->_instType),
-            _bus->busRead(ctx->_regs._pc - 1), registerTypeTable[inst->_regType1]);
+            EmuGet()->getCart()->busRead(ctx->_regs._pc - 1), registerTypeTable[inst->_regType1]);
         return;
 
     case AM_HL_SPR:
@@ -1044,7 +1037,7 @@ void Cpu::instructionToStr(CpuContext* ctx, char* str)
 
 void Cpu::stackPush(u8 data) {
     _context._regs._sp--;
-    _bus->busWrite(_context._regs._sp, data);
+    EmuGet()->getCart()->busWrite(_context._regs._sp, data);
 }
 
 void Cpu::stackPush16(u16 data) {
@@ -1053,7 +1046,7 @@ void Cpu::stackPush16(u16 data) {
 }
 
 u8 Cpu::stackPop() {
-    return _bus->busRead(_context._regs._sp++);
+    return EmuGet()->getCart()->busRead(_context._regs._sp++);
 }
 
 u16 Cpu::stackPop16() {

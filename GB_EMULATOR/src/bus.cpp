@@ -1,4 +1,4 @@
-
+#if 0
 #include <bus.h>
 #include <cart.h>
 
@@ -94,3 +94,4 @@ void Bus::busWrite16(u16 address, u16 value)
     busWrite(address + 1, (value >> 8) & 0xFF);
     busWrite(address, value & 0xFF);
 }
+#endif

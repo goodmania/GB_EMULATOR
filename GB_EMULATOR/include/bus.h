@@ -1,3 +1,4 @@
+#if 0
 #pragma once
 
 #include <common.h>
@@ -15,3 +16,4 @@ public:
 private:
 	Cart* _cart;
 };
+#endif

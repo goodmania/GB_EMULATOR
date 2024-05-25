@@ -61,7 +61,7 @@ class Cpu {
 #define CPU_FLAG_C BIT(_context._regs._f, 4)
 
 public:
-    Cpu(Bus& bus, Timer& timer, Emu& emu);
+    Cpu();
     ~Cpu() = default;
 
 	void initialize();
@@ -144,9 +144,6 @@ private:
     IN_PROC getProcessorByInstructionType(InstructionType& instType);
 
     CpuContext _context;
-    Timer* _timer;
-    Bus* _bus;
     std::map<InstructionType, IN_PROC> _processors;
-    Emu* _emu;
 };
 

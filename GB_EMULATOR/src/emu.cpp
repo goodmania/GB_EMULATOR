@@ -1,8 +1,13 @@
 #include <emu.h>
 #include <cart.h>
 #include <cpu.h>
+#include <timer.h>
 #include <SDL.h>
 #include <SDL_ttf.h>
+
+namespace {
+    Emu* g_emu;
+} // namespace
 
 void delay(u32 ms) 
 {
@@ -12,6 +17,7 @@ void delay(u32 ms)
 Emu::Emu()
 {
     initialize();
+    initialize1();
 }
 
 Emu::~Emu()
@@ -22,6 +28,7 @@ Emu::~Emu()
 void Emu::initialize()
 {
     _emuContext = new EmuContext;
+    _timer = new Timer;
     _cart = new Cart;
     _cpu = new Cpu;
 
@@ -33,9 +40,15 @@ void Emu::initialize()
     }
 }
 
+void Emu::initialize1()
+{
+    g_emu = this;
+}
+
 void Emu::terminate()
 {
     delete _emuContext;
+    delete _timer;
     delete _cpu;
     delete _cart;
 }
@@ -87,9 +100,18 @@ void Emu::emuCycles(s32 cpuCycles) {
     for (s32 i = 0; i < cpuCycles; i++) {
         for (s32 n = 0; n < 4; n++) {
             _emuContext->_ticks++;
-            // timer_tick();
+            _timer->tick();
             // ppu_tick();
         }
         // dma_tick();
     }
+}
+
+Emu* EmuGet()
+{
+    if (g_emu)
+    {
+        return g_emu;
+    }
+    return nullptr;
 }
