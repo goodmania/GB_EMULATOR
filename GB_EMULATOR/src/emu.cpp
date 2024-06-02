@@ -1,7 +1,13 @@
-#include <emu.h>
-#include <cart.h>
-#include <cpu.h>
-#include <timer.h>
+#include "emu.h"
+
+#include "cart.h"
+#include "cpu.h"
+#include "dma.h"
+#include "gamepad.h"
+#include "ppu.h"
+#include "timer.h"
+#include "ui.h"
+
 #include <SDL.h>
 #include <SDL_ttf.h>
 
@@ -31,6 +37,10 @@ void Emu::initialize()
     _timer = new Timer;
     _cart = new Cart;
     _cpu = new Cpu;
+    _ppu = new Ppu;
+    _dma = new Dma;
+    _ui = new Ui;
+    _gamePad = new Gamepad;
 
     if (_emuContext)
     {
@@ -51,6 +61,9 @@ void Emu::terminate()
     delete _timer;
     delete _cpu;
     delete _cart;
+    delete _dma;
+    delete _ui;
+    delete _gamePad;
 }
 
 Emu::EmuContext* Emu::getEmuContext()
@@ -101,9 +114,9 @@ void Emu::emuCycles(s32 cpuCycles) {
         for (s32 n = 0; n < 4; n++) {
             _emuContext->_ticks++;
             _timer->tick();
-            // ppu_tick();
+            _ppu->tick();
         }
-        // dma_tick();
+        _dma->tick();
     }
 }
 

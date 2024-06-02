@@ -159,20 +159,32 @@ xcopy "$(SolutionDir)external\SDL2_TTF\lib\$(PlatformTarget)\*.dll" "$(OutDir)" 
     <ClCompile Include="src\bus.cpp" />
     <ClCompile Include="src\cart.cpp" />
     <ClCompile Include="src\cpu.cpp" />
+    <ClCompile Include="src\dbg.cpp" />
+    <ClCompile Include="src\dma.cpp" />
     <ClCompile Include="src\emu.cpp" />
+    <ClCompile Include="src\gamepad.cpp" />
     <ClCompile Include="src\instructions.cpp" />
+    <ClCompile Include="src\lcd.cpp" />
+    <ClCompile Include="src\ppu.cpp" />
     <ClCompile Include="src\ram.cpp" />
     <ClCompile Include="src\timer.cpp" />
+    <ClCompile Include="src\ui.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\bus.h" />
     <ClInclude Include="include\cart.h" />
     <ClInclude Include="include\common.h" />
     <ClInclude Include="include\cpu.h" />
+    <ClInclude Include="include\dbg.h" />
+    <ClInclude Include="include\dma.h" />
     <ClInclude Include="include\emu.h" />
+    <ClInclude Include="include\gamepad.h" />
     <ClInclude Include="include\instructions.h" />
+    <ClInclude Include="include\lcd.h" />
+    <ClInclude Include="include\ppu.h" />
     <ClInclude Include="include\ram.h" />
     <ClInclude Include="include\timer.h" />
+    <ClInclude Include="include\ui.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

@@ -167,6 +167,19 @@ void Cart::write(u16 address, u8 value)
     NO_IMPL
 }
 
+bool Cart::needSave()
+{
+    return _context._needSave;
+}
+
+void Cart::batteryLoad()
+{
+}
+
+void Cart::batterySave()
+{
+}
+
 const char* Cart::cartLicName()
 {
     if (_context._header->_newLicCode <= 0xA4) {

@@ -24,6 +24,23 @@ struct CartContext {
 	u32 _romSize;
 	u8* _romData;
 	RomHeader* _header;
+
+	//mbc1 related data
+	bool _ramEnabled;
+	bool _ramBanking;
+
+	u8* _romBankX;
+	u8 _bankingMode;
+
+	u8 _romBankValue;
+	u8 _ramBankValue;
+
+	u8* _ramBank; //current selected ram bank
+	u8* _ramBanks[16]; //all ram banks
+
+	//for battery
+	bool _battery; //has battery
+	bool _needSave; //should save battery backup.
 };
 
 class Cart {
@@ -32,6 +49,10 @@ public:
 	bool cartLoad(char* cart);
 	u8 read(u16 address);
 	void write(u16 address, u8 value);
+
+	bool needSave();
+	void batteryLoad();
+	void batterySave();
 
 	u8 busRead(u16 address);
 	void busWrite(u16 address, u8 value);
