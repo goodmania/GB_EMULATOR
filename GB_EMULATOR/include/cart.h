@@ -46,9 +46,12 @@ struct CartContext {
 class Cart {
 public:
 	void initialize();
-	bool cartLoad(char* cart);
+	bool load(char* cart);
 	u8 read(u16 address);
 	void write(u16 address, u8 value);
+
+	bool mbc1();
+	bool battery();
 
 	bool needSave();
 	void batteryLoad();

@@ -78,7 +78,7 @@ void Ui::handleEvents()
     }
 }
 
-void onKey(bool down, u32 keyCode) {
+void Ui::onKey(bool down, u32 keyCode) {
     GamepadState* state = EmuGet()->getGamepad()->getState();
     switch (keyCode) {
     case SDLK_z: state->_b = down; break;

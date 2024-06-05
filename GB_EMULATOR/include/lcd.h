@@ -57,9 +57,10 @@ public:
     void setLyc(bool b) { BIT_SET(getContext()->_lcdS, 2, b); }
     bool statInt(u8 src) {return getContext()->_lcdS & src;}
 
-private:
     u8 read(u16 address);
     void write(u16 address, u8 value);
+private:
+    
     void updatePalette(u8 paletteData, u8 palette);
 
     LcdContext _context;

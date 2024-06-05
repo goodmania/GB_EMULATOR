@@ -101,6 +101,7 @@ public:
     u8 vramRead(u16 address);
 
     PpuContext* getContext() { return &_context; }
+    Lcd* getLcd() { return _lcd; }
     void tick();
 
 private:

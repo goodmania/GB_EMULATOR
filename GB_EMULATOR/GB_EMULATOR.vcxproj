@@ -164,6 +164,7 @@ xcopy "$(SolutionDir)external\SDL2_TTF\lib\$(PlatformTarget)\*.dll" "$(OutDir)" 
     <ClCompile Include="src\emu.cpp" />
     <ClCompile Include="src\gamepad.cpp" />
     <ClCompile Include="src\instructions.cpp" />
+    <ClCompile Include="src\io.cpp" />
     <ClCompile Include="src\lcd.cpp" />
     <ClCompile Include="src\ppu.cpp" />
     <ClCompile Include="src\ram.cpp" />
@@ -180,6 +181,7 @@ xcopy "$(SolutionDir)external\SDL2_TTF\lib\$(PlatformTarget)\*.dll" "$(OutDir)" 
     <ClInclude Include="include\emu.h" />
     <ClInclude Include="include\gamepad.h" />
     <ClInclude Include="include\instructions.h" />
+    <ClInclude Include="include\io.h" />
     <ClInclude Include="include\lcd.h" />
     <ClInclude Include="include\ppu.h" />
     <ClInclude Include="include\ram.h" />

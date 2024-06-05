@@ -1,4 +1,11 @@
-#include <cart.h>
+#include "cart.h"
+#include "cpu.h"
+#include "dma.h"
+#include "emu.h"
+#include "io.h"
+#include "ppu.h"
+#include "ram.h"
+
 #include <map>
 
 namespace{
@@ -111,7 +118,7 @@ void Cart::initialize()
 
 }
 
-bool Cart::cartLoad(char* cart)
+bool Cart::load(char* cart)
 {
     snprintf(_context._filename, sizeof(_context._filename), "%s", cart);
     FILE* fp = nullptr;
@@ -156,15 +163,90 @@ bool Cart::cartLoad(char* cart)
 
 u8 Cart::read(u16 address)
 {
-    //for now just ROM ONLY type supported...
+    if (!mbc1() || address < 0x4000) {
+        return _context._romData[address];
+    }
 
-    return _context._romData[address];
+    if ((address & 0xE000) == 0xA000) {
+        if (!_context._ramEnabled) {
+            return 0xFF;
+        }
+
+        if (!_context._ramBank) {
+            return 0xFF;
+        }
+
+        return _context._ramBank[address - 0xA000];
+    }
+
+    return _context._romBankX[address - 0x4000];
 }
 
 void Cart::write(u16 address, u8 value)
 {
-    //for now, ROM ONLY...
-    NO_IMPL
+    if (!mbc1()) {
+        return;
+    }
+
+    if (address < 0x2000) {
+        _context._ramEnabled = ((value & 0xF) == 0xA);
+    }
+
+    if ((address & 0xE000) == 0x2000) {
+        //rom bank number
+        if (value == 0) {
+            value = 1;
+        }
+
+        value &= 0b11111;
+
+        _context._romBankValue = value;
+        _context._romBankX = _context._romData + (0x4000 * _context._romBankValue);
+    }
+
+    if ((address & 0xE000) == 0x4000) {
+        //ram bank number
+        _context._ramBankValue = value & 0b11;
+
+        if (_context._ramBanking) {
+            if (needSave()) {
+                batterySave();
+            }
+
+            _context._ramBank = _context._ramBanks[_context._ramBankValue];
+        }
+    }
+
+    if ((address & 0xE000) == 0x6000) {
+        //banking mode select
+        _context._bankingMode = value & 1;
+
+        _context._ramBanking = _context._bankingMode;
+
+        if (_context._ramBanking) {
+            if (needSave()) {
+                batterySave();
+            }
+
+            _context._ramBank = _context._ramBanks[_context._ramBankValue];
+        }
+    }
+
+    if ((address & 0xE000) == 0xA000) {
+        if (!_context._ramEnabled) {
+            return;
+        }
+
+        if (!_context._ramBank) {
+            return;
+        }
+
+        _context._ramBank[address - 0xA000] = value;
+
+        if (_context._battery) {
+            _context._needSave = true;
+        }
+    }
 }
 
 bool Cart::needSave()
@@ -172,12 +254,51 @@ bool Cart::needSave()
     return _context._needSave;
 }
 
+bool Cart::mbc1() {
+    return BETWEEN(_context._header->_type, 1, 3);
+}
+
+bool Cart::battery() {
+    //mbc1 only for now...
+    return _context._header->_type == 3;
+}
+
 void Cart::batteryLoad()
 {
+    if (!_context._ramBank) {
+        return;
+    }
+
+    char fn[1048];
+    sprintf(fn, "%s.battery", _context._filename);
+    FILE* fp = fopen(fn, "rb");
+
+    if (!fp) {
+        fprintf(stderr, "FAILED TO OPEN: %s\n", fn);
+        return;
+    }
+
+    fread(_context._ramBank, 0x2000, 1, fp);
+    fclose(fp);
 }
 
 void Cart::batterySave()
 {
+    if (!_context._ramBank) {
+        return;
+    }
+
+    char fn[1048];
+    sprintf(fn, "%s.battery", _context._filename);
+    FILE* fp = fopen(fn, "wb");
+
+    if (!fp) {
+        fprintf(stderr, "FAILED TO OPEN: %s\n", fn);
+        return;
+    }
+
+    fwrite(_context._ramBank, 0x2000, 1, fp);
+    fclose(fp);
 }
 
 const char* Cart::cartLicName()
@@ -214,22 +335,28 @@ const char* Cart::cartTypeName()
 
 u8 Cart::busRead(u16 address)
 {
+    Emu* emu = EmuGet();
+    Cpu* cpu = emu->getCpu();
+    Dma* dma = emu->getDma();
+    Io* io = emu->getIo();
+    Ppu* ppu = emu->getPpu();
+    Ram* ram = emu->getRam();
+
     if (address < 0x8000) {
         //ROM Data
         return read(address);
     }
-#if 0
     else if (address < 0xA000) {
         //Char/Map Data
-        return ppuVramRead(address);
+        return ppu->vramRead(address);
     }
     else if (address < 0xC000) {
         //Cartridge RAM
-        return cartRead(address);
+        return read(address);
     }
     else if (address < 0xE000) {
         //WRAM (Working RAM)
-        return wramRead(address);
+        return ram->wramRead(address);
     }
     else if (address < 0xFE00) {
         //reserved echo ram...
@@ -237,11 +364,11 @@ u8 Cart::busRead(u16 address)
     }
     else if (address < 0xFEA0) {
         //OAM
-        if (dmaTransferring()) {
+        if (dma->transferring()) {
             return 0xFF;
         }
 
-        return ppuOamRead(address);
+        return ppu->oamRead(address);
     }
     else if (address < 0xFF00) {
         //reserved unusable...
@@ -249,26 +376,68 @@ u8 Cart::busRead(u16 address)
     }
     else if (address < 0xFF80) {
         //IO Registers...
-        return ioRead(address);
+        return io->read(address);
     }
     else if (address == 0xFFFF) {
         //CPU ENABLE REGISTER...
-        return cpuGetIeRegister();
+        return cpu->getIeRegister();
     }
 
-    return hram_read(address);
-#endif
-    NO_IMPL
+    return ram->hramRead(address);
+
 }
 
 void Cart::busWrite(u16 address, u8 value)
 {
+    Emu* emu = EmuGet();
+    Cpu* cpu = emu->getCpu();
+    Dma* dma = emu->getDma();
+    Io* io = emu->getIo();
+    Ppu* ppu = emu->getPpu();
+    Ram* ram = emu->getRam();
+
     if (address < 0x8000) {
         //ROM Data
         write(address, value);
-        return;
     }
-    NO_IMPL
+    else if (address < 0xA000) {
+        //Char/Map Data
+        ppu->vramWrite(address, value);
+    }
+    else if (address < 0xC000) {
+        //EXT-RAM
+        write(address, value);
+    }
+    else if (address < 0xE000) {
+        //WRAM
+        ram->wramWrite(address, value);
+    }
+    else if (address < 0xFE00) {
+        //reserved echo ram
+    }
+    else if (address < 0xFEA0) {
+        //OAM
+        if (dma->transferring()) {
+            return;
+        }
+
+        ppu->oamWrite(address, value);
+    }
+    else if (address < 0xFF00) {
+        //unusable reserved
+    }
+    else if (address < 0xFF80) {
+        //IO Registers...
+        io->write(address, value);
+    }
+    else if (address == 0xFFFF) {
+        //CPU SET ENABLE REGISTERs
+
+        cpu->setIeRegister(value);
+    }
+    else {
+        ram->hramWrite(address, value);
+    }
 }
 
 u16 Cart::busRead16(u16 address)

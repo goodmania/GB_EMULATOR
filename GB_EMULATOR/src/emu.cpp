@@ -4,7 +4,9 @@
 #include "cpu.h"
 #include "dma.h"
 #include "gamepad.h"
+#include "io.h"
 #include "ppu.h"
+#include "ram.h"
 #include "timer.h"
 #include "ui.h"
 
@@ -38,9 +40,11 @@ void Emu::initialize()
     _cart = new Cart;
     _cpu = new Cpu;
     _ppu = new Ppu;
+    _ram = new Ram;
     _dma = new Dma;
     _ui = new Ui;
-    _gamePad = new Gamepad;
+    _gamepad = new Gamepad;
+    _io = new Io;
 
     if (_emuContext)
     {
@@ -63,7 +67,8 @@ void Emu::terminate()
     delete _cart;
     delete _dma;
     delete _ui;
-    delete _gamePad;
+    delete _gamepad;
+    delete _io;
 }
 
 Emu::EmuContext* Emu::getEmuContext()
@@ -78,7 +83,7 @@ s32 Emu::emuRun(s32 argc, char** argv) {
         return -1;
     }
 
-    if (!_cart->cartLoad(argv[1])) {
+    if (!_cart->load(argv[1])) {
         printf("Failed to load ROM file: %s\n", argv[1]);
         return -2;
     }
