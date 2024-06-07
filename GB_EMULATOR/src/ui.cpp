@@ -149,7 +149,7 @@ void Ui::displayTile(SDL_Surface* surface, u16 startLocation, u16 tileNum, s32 x
             rc.w = _scale;
             rc.h = _scale;
 
-            SDL_FillRect(surface, &rc, _tileColors[color]);
+            SDL_FillRect(surface, &rc, (Uint32)_tileColors[color]);
         }
     }
 }

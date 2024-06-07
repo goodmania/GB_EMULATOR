@@ -119,7 +119,7 @@ public:
     u8 getIntFlags();
     void setIntFlags(u8 value);
 
-    void instructionToStr(CpuContext* ctx, char* str);
+    void instructionToStr(CpuContext* ctx, char* str, const u8 strSize);
 
     void stackPush(u8 data);
     void stackPush16(u16 data);

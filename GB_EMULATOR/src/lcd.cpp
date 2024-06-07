@@ -20,9 +20,9 @@ void Lcd::initialize()
     _context._winX = 0;
 
     for (int i = 0; i < 4; i++) {
-        _context._bgColors[i] = _colorsDefault[i];
-        _context._sp1Colors[i] = _colorsDefault[i];
-        _context._sp2Colors[i] = _colorsDefault[i];
+        _context._bgColors[i] = static_cast<u32>(_colorsDefault[i]);
+        _context._sp1Colors[i] = static_cast<u32>(_colorsDefault[i]);
+        _context._sp2Colors[i] = static_cast<u32>(_colorsDefault[i]);
     }
 }
 
@@ -68,8 +68,8 @@ void Lcd::updatePalette(u8 paletteData, u8 palette)
         break;
     }
 
-    colors[0] = _colorsDefault[paletteData & 0b11];
-    colors[1] = _colorsDefault[(paletteData >> 2) & 0b11];
-    colors[2] = _colorsDefault[(paletteData >> 4) & 0b11];
-    colors[3] = _colorsDefault[(paletteData >> 6) & 0b11];
+    colors[0] = static_cast<u32>(_colorsDefault[paletteData & 0b11]);
+    colors[1] = static_cast<u32>(_colorsDefault[(paletteData >> 2) & 0b11]);
+    colors[2] = static_cast<u32>(_colorsDefault[(paletteData >> 4) & 0b11]);
+    colors[3] = static_cast<u32>(_colorsDefault[(paletteData >> 6) & 0b11]);
 }

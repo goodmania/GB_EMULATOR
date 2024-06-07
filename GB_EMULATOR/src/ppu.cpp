@@ -43,6 +43,7 @@ void Ppu::initialize()
 void Ppu::initialize1()
 {
     // todo : lcd ƒNƒ‰ƒX‚ðŒã‚ÅŽÀ‘•
+    _lcd = new Lcd();
     _lcd->initialize();
     _lcd->setLcdMode(MODE_OAM);
 }
@@ -264,14 +265,14 @@ void Ppu::modeHblank()
             }
 
             if (end - startTimer >= 1000) {
-                u32 fps = frameCount;
+                u32 fps = static_cast<u32>(frameCount);
                 startTimer = end;
                 frameCount = 0;
 
                 printf("FPS: %d\n", fps);
-
-                if (cart_need_save()) {
-                    cart_battery_save();
+                
+                if (EmuGet()->getCart()->needSave()) {
+                    EmuGet()->getCart()->batterySave();
                 }
             }
 

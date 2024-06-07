@@ -43,17 +43,17 @@ public:
     LcdContext* getContext() { return &_context; }
     void initialize();
 
-    bool isBgwEable() { BIT(getContext()->_lcdC, 0); }
-    bool isObjEable() { BIT(getContext()->_lcdC, 1); }
-    u8 objHeight() { BIT(getContext()->_lcdC, 2) ? 16 : 8; }
-    u16 bgMapArea() { BIT(getContext()->_lcdC, 3) ? 0x9C00 : 0x9800; }
-    u16 bgwDataArea() { BIT(getContext()->_lcdC, 4) ? 0x8000 : 0x8800; }
-    bool isWinEnable() { BIT(getContext()->_lcdC, 5); }
-    u16 winMapArea() { BIT(getContext()->_lcdC, 6) ? 0x9C00 : 0x9800; }
-    bool isLcdEnable() { BIT(getContext()->_lcdC, 7); }
-    LcdMode getLcdMode() { (LcdMode)getContext()->_lcdS & 0b11; }
+    bool isBgwEable() { return BIT(getContext()->_lcdC, 0); }
+    bool isObjEable() { return BIT(getContext()->_lcdC, 1); }
+    u8 objHeight() { return BIT(getContext()->_lcdC, 2) ? 16 : 8; }
+    u16 bgMapArea() { return BIT(getContext()->_lcdC, 3) ? 0x9C00 : 0x9800; }
+    u16 bgwDataArea() { return BIT(getContext()->_lcdC, 4) ? 0x8000 : 0x8800; }
+    bool isWinEnable() { return BIT(getContext()->_lcdC, 5); }
+    u16 winMapArea() { return BIT(getContext()->_lcdC, 6) ? 0x9C00 : 0x9800; }
+    bool isLcdEnable() { return BIT(getContext()->_lcdC, 7); }
+    LcdMode getLcdMode() { return static_cast<LcdMode>(getContext()->_lcdS & 0b11); }
     void setLcdMode(LcdMode mode) { getContext()->_lcdS &= ~0b11; getContext()->_lcdS |= mode; }
-    bool isLycEnable() { BIT(getContext()->_lcdS, 2); }
+    bool isLycEnable() { return BIT(getContext()->_lcdS, 2); }
     void setLyc(bool b) { BIT_SET(getContext()->_lcdS, 2, b); }
     bool statInt(u8 src) {return getContext()->_lcdS & src;}
 

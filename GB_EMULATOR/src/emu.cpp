@@ -13,6 +13,9 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
+#include <thread>
+#include <chrono>
+
 namespace {
     Emu* g_emu;
 } // namespace
@@ -71,9 +74,22 @@ void Emu::terminate()
     delete _io;
 }
 
-Emu::EmuContext* Emu::getEmuContext()
-{
-    return _emuContext;
+void* Emu::cpuRun(void* p) {
+    _cpu->initialize();
+
+    while (_emuContext->_running) {
+        if (_emuContext->_paused) {
+            delay(10);
+            continue;
+        }
+
+        if (!_cpu->step()) {
+            printf("CPU Stopped\n");
+            return 0;
+        }
+        _emuContext->_ticks++;
+    }
+    return 0;
 }
 
 s32 Emu::emuRun(s32 argc, char** argv) {
@@ -90,25 +106,18 @@ s32 Emu::emuRun(s32 argc, char** argv) {
 
     printf("Cart loaded..\n");
 
-    SDL_Init(SDL_INIT_VIDEO);
-    printf("SDL INIT\n");
-    TTF_Init();
-    printf("TTF INIT\n");
+    std::thread t1(&Emu::cpuRun, this, nullptr);
+    t1.join();
+    
+    u32 prevFrame = 0;
+    while (!_emuContext->_die) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        _ui->handleEvents();
 
-    _cpu->initialize();
-
-    while (_emuContext->_running) {
-        if (_emuContext->_paused) {
-            delay(10);
-            continue;
+        if (prevFrame != _ppu->getContext()->_currentFrame) {
+            _ui->update();
         }
-
-        if (!_cpu->step()) {
-            printf("CPU Stopped\n");
-            return -3;
-        }
-
-        _emuContext->_ticks++;
+        prevFrame = _ppu->getContext()->_currentFrame;
     }
 
     return 0;

@@ -270,8 +270,10 @@ void Cart::batteryLoad()
     }
 
     char fn[1048];
-    sprintf(fn, "%s.battery", _context._filename);
-    FILE* fp = fopen(fn, "rb");
+    sprintf_s(fn, sizeof(fn), "%s.battery", _context._filename);
+
+    FILE* fp = nullptr;
+    fopen_s(&fp, fn, "rb");
 
     if (!fp) {
         fprintf(stderr, "FAILED TO OPEN: %s\n", fn);
@@ -289,8 +291,10 @@ void Cart::batterySave()
     }
 
     char fn[1048];
-    sprintf(fn, "%s.battery", _context._filename);
-    FILE* fp = fopen(fn, "wb");
+    sprintf_s(fn, sizeof(fn), "%s.battery", _context._filename);
+
+    FILE* fp = nullptr;
+    fopen_s(&fp, fn, "wb");
 
     if (!fp) {
         fprintf(stderr, "FAILED TO OPEN: %s\n", fn);

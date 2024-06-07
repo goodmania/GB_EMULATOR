@@ -22,15 +22,15 @@ public:
 private:
 	void updateDbgWindow();
 
-	SDL_Window* _sdlWindow;
-	SDL_Renderer* _sdlRenderer;
-	SDL_Texture* _sdlTexture;
-	SDL_Surface* _screen;
+	SDL_Window* _sdlWindow = nullptr;
+	SDL_Renderer* _sdlRenderer = nullptr;
+	SDL_Texture* _sdlTexture = nullptr;
+	SDL_Surface* _screen = nullptr;
 
-	SDL_Window* _sdlDebugWindow;
-	SDL_Renderer* _sdlDebugRenderer;
-	SDL_Texture* _sdlDebugTexture;
-	SDL_Surface* _debugScreen;
+	SDL_Window* _sdlDebugWindow = nullptr;
+	SDL_Renderer* _sdlDebugRenderer = nullptr;
+	SDL_Texture* _sdlDebugTexture = nullptr;
+	SDL_Surface* _debugScreen = nullptr;
 
 	const s32 _scale = 4;
 	s64 _tileColors[4] = { 0xFFFFFFFF, 0xFFAAAAAA, 0xFF555555, 0xFF000000 };

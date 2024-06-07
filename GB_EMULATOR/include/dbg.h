@@ -2,5 +2,10 @@
 
 #include <common.h>
 
-void dbg_update();
-void dbg_print();
+class Dbg {
+	void update();
+	void print();
+private:
+	char _dbgMsg[1024];
+	int _msgSize;
+};

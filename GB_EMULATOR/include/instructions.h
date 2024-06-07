@@ -26,7 +26,7 @@ enum AddressingMode{
     AM_R_A16
 };
 
-enum RegisterType {
+enum RegisterType : u16 {
     RT_NONE,
     RT_A,
     RT_F,
@@ -118,7 +118,7 @@ struct Instruction {
     AddressingMode _addrMode;
     RegisterType _regType0;
     RegisterType _regType1;
-    ConditionType _cond;
+    ConditionType _conditionType;
     u8 _param;
 };
 

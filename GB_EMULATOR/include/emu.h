@@ -38,6 +38,7 @@ public:
 	
 	s32 emuRun(s32 argc, char** argv);
 	void emuCycles(s32 cpuCycles);
+	void* cpuRun(void* p);
 
 private:
 	void initialize();

@@ -37,13 +37,14 @@ namespace {
 #endif
 };
 
-Cpu::Cpu() {}
+Cpu::Cpu() {
+}
 
 void Cpu::initialize()
 {
     _context._regs._pc = 0x100;
     _context._regs._sp = 0xFFFE;
-    *((short*)&_context._regs._a) = 0xB001;
+    *((short*)&_context._regs._a) = 0xB001; 
     *((short*)&_context._regs._b) = 0x1300;
     *((short*)&_context._regs._d) = 0xD800;
     *((short*)&_context._regs._h) = 0x4D01;
@@ -138,17 +139,18 @@ bool Cpu::step()
 
 #if CPU_DEBUG
         char flags[16];
-        sprintf(flags, "%c%c%c%c",
+        sprintf_s(flags, "%c%c%c%c",
             _context._regs._f & (1 << 7) ? 'Z' : '-',
             _context._regs._f & (1 << 6) ? 'N' : '-',
             _context._regs._f & (1 << 5) ? 'H' : '-',
             _context._regs._f & (1 << 4) ? 'C' : '-'
         );
 
-        char inst[16];
-        instructionToStr(&_context, inst);
-
-        printf("%08lX - %04X: %-12s (%02X %02X %02X) A: %02X F: %s BC: %02X%02X DE: %02X%02X HL: %02X%02X\n",
+        const u8 instSize = 16;
+        char inst[instSize];
+        instructionToStr(&_context, inst, instSize);
+         
+        printf("%llu - %04X: %-12s (%02X %02X %02X) A: %02X F: %s BC: %02X%02X DE: %02X%02X HL: %02X%02X\n",
             EmuGet()->getEmuContext()->_ticks,
             pc, inst, _context._curOpcode,
             EmuGet()->getCart()->busRead(pc + 1), EmuGet()->getCart()->busRead(pc + 2), _context._regs._a, flags, _context._regs._b, _context._regs._c,
@@ -196,8 +198,8 @@ void Cpu::fetchData()
 {
     _context._memDest = 0;
     _context._destIsMem = false;
-
-    if (_context._curInst == NULL) {
+    Cart* cart = EmuGet()->getCart();
+    if (_context._curInst == nullptr) {
         return;
     }
 
@@ -210,21 +212,143 @@ void Cpu::fetchData()
         return;
 
     case AM_R_D8:
-        _context._fetchedData = EmuGet()->getCart()->busRead(_context._regs._pc);
+        _context._fetchedData = cart->busRead(_context._regs._pc);
         EmuGet()->emuCycles(1);
         _context._regs._pc++;
         return;
 
+    case AM_R_D16:
     case AM_D16: {
-        u16 lo = EmuGet()->getCart()->busRead(_context._regs._pc);
+        u16 lo = cart->busRead(_context._regs._pc);
         EmuGet()->emuCycles(1);
 
-        u16 hi = EmuGet()->getCart()->busRead(_context._regs._pc + 1);
+        u16 hi = cart->busRead(_context._regs._pc + 1);
         EmuGet()->emuCycles(1);
 
         _context._fetchedData = lo | (hi << 8);
 
         _context._regs._pc += 2;
+
+        return;
+    }
+    
+    case AM_MR_R:{
+        _context._fetchedData = readRegister(_context._curInst->_regType1);
+        _context._memDest = readRegister(_context._curInst->_regType0);
+        _context._destIsMem = true;
+
+        if (_context._curInst->_regType1 == RT_C) {
+            _context._memDest |= 0xFF00;
+        }
+        return;
+    }
+
+    case AM_R_MR: {
+        u16 addr = readRegister(_context._curInst->_regType1);
+
+        if (_context._curInst->_regType1 == RT_C) {
+            addr |= 0xFF00;
+        }
+
+        _context._fetchedData = cart->busRead(addr);
+        EmuGet()->emuCycles(1);
+        return;
+    } 
+    
+    case AM_R_HLI:
+        _context._fetchedData = cart->busRead(readRegister(_context._curInst->_regType1));
+        EmuGet()->emuCycles(1);;
+        setRegister(RT_HL, readRegister(RT_HL) + 1);
+        return;
+
+    case AM_R_HLD:
+        _context._fetchedData = cart->busRead(readRegister(_context._curInst->_regType1));
+        EmuGet()->emuCycles(1);;
+        setRegister(RT_HL, readRegister(RT_HL) - 1);
+        return;
+
+    case AM_HLI_R:
+        _context._fetchedData = readRegister(_context._curInst->_regType1);
+        _context._memDest = readRegister(_context._curInst->_regType0);
+        _context._destIsMem = true;
+        setRegister(RT_HL, readRegister(RT_HL) + 1);
+        return;
+
+    case AM_HLD_R:
+        _context._fetchedData = readRegister(_context._curInst->_regType1);
+        _context._memDest = readRegister(_context._curInst->_regType0);
+        _context._destIsMem = true;
+        setRegister(RT_HL, readRegister(RT_HL) - 1);
+        return;
+
+    case AM_R_A8:
+        _context._fetchedData = cart->busRead(_context._regs._pc);
+        EmuGet()->emuCycles(1);
+        _context._regs._pc++;
+        return;
+
+    case AM_A8_R:
+        _context._memDest = cart->busRead(_context._regs._pc) | 0xFF00;
+        _context._destIsMem = true;
+        EmuGet()->emuCycles(1);
+        _context._regs._pc++;
+        return;
+
+    case AM_HL_SPR:
+        _context._fetchedData = cart->busRead(_context._regs._pc);
+        EmuGet()->emuCycles(1);
+        _context._regs._pc++;
+        return;
+
+    case AM_D8:
+        _context._fetchedData = cart->busRead(_context._regs._pc);
+        EmuGet()->emuCycles(1);
+        _context._regs._pc++;
+        return;
+
+    case AM_A16_R:
+    case AM_D16_R: {
+        u16 lo = cart->busRead(_context._regs._pc);
+        EmuGet()->emuCycles(1);
+
+        u16 hi = cart->busRead(_context._regs._pc + 1);
+        EmuGet()->emuCycles(1);
+
+        _context._memDest = lo | (hi << 8);
+        _context._destIsMem = true;
+
+        _context._regs._pc += 2;
+        _context._fetchedData = readRegister(_context._curInst->_regType1);
+
+    } return;
+
+    case AM_MR_D8:
+        _context._fetchedData = cart->busRead(_context._regs._pc);
+        EmuGet()->emuCycles(1);
+        _context._regs._pc++;
+        _context._memDest = readRegister(_context._curInst->_regType0);
+        _context._destIsMem = true;
+        return;
+
+    case AM_MR:
+        _context._memDest = readRegister(_context._curInst->_regType0);
+        _context._destIsMem = true;
+        _context._fetchedData = cart->busRead(readRegister(_context._curInst->_regType0));
+        EmuGet()->emuCycles(1);;
+        return;
+
+    case AM_R_A16: {
+        u16 lo = cart->busRead(_context._regs._pc);
+        EmuGet()->emuCycles(1);
+
+        u16 hi = cart->busRead(_context._regs._pc + 1);
+        EmuGet()->emuCycles(1);
+
+        u16 addr = lo | (hi << 8);
+
+        _context._regs._pc += 2;
+        _context._fetchedData = cart->busRead(addr);
+        EmuGet()->emuCycles(1);
 
         return;
     }
@@ -266,7 +390,7 @@ void Cpu::procNop(CpuContext* ctx)
 }
 
 void Cpu::procCb(CpuContext* ctx) {
-    u8 op = ctx->_fetchedData;
+    u16 op = ctx->_fetchedData;
     RegisterType regType = decodeReg(op & 0b111);
     u8 bit = (op >> 3) & 0b111;
     u8 bitOp = (op >> 6) & 0b11;
@@ -532,7 +656,7 @@ bool Cpu::checkCond(CpuContext* ctx) {
     bool z = CPU_FLAG_Z;
     bool c = CPU_FLAG_C;
 
-    switch (ctx->_curInst->_cond) {
+    switch (ctx->_curInst->_conditionType) {
     case CT_NONE: return true;
     case CT_C: return c;
     case CT_NC: return !c;
@@ -574,7 +698,7 @@ void Cpu::procRst(CpuContext* ctx) {
 }
 
 void Cpu::procRet(CpuContext* ctx) {
-    if (ctx->_curInst->_cond != CT_NONE) {
+    if (ctx->_curInst->_conditionType != CT_NONE) {
         EmuGet()->emuCycles(1);
     }
 
@@ -850,10 +974,11 @@ void Cpu::setIntFlags(u8 value)
     _context._intFlags = value;
 }
 
-void Cpu::instructionToStr(CpuContext* ctx, char* str)
+void Cpu::instructionToStr(CpuContext* ctx, char* str, const u8 strSize)
 {
     Instruction* inst = ctx->_curInst;
-    sprintf(str, "%s ", getInstructionName(inst->_instType));
+
+    snprintf(str, strSize, "%s ", getInstructionName(inst->_instType));
 
     switch (inst->_addrMode) {
     case AM_IMP:
@@ -861,88 +986,88 @@ void Cpu::instructionToStr(CpuContext* ctx, char* str)
 
     case AM_R_D16:
     case AM_R_A16:
-        sprintf(str, "%s %s,$%04X", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s %s,$%04X", getInstructionName(inst->_instType),
             registerTypeTable[inst->_regType0], ctx->_fetchedData);
         return;
 
     case AM_R:
-        sprintf(str, "%s %s", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s %s", getInstructionName(inst->_instType),
             registerTypeTable[inst->_regType0]);
         return;
 
     case AM_R_R:
-        sprintf(str, "%s %s,%s", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s %s,%s", getInstructionName(inst->_instType),
             registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
         return;
 
     case AM_MR_R:
-        sprintf(str, "%s (%s),%s", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s (%s),%s", getInstructionName(inst->_instType),
             registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
         return;
 
     case AM_MR:
-        sprintf(str, "%s (%s)", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s (%s)", getInstructionName(inst->_instType),
             registerTypeTable[inst->_regType0]);
         return;
 
     case AM_R_MR:
-        sprintf(str, "%s %s,(%s)", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s %s,(%s)", getInstructionName(inst->_instType),
             registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
         return;
 
     case AM_R_D8:
     case AM_R_A8:
-        sprintf(str, "%s %s,$%02X", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s %s,$%02X", getInstructionName(inst->_instType),
             registerTypeTable[inst->_regType0], ctx->_fetchedData & 0xFF);
         return;
 
     case AM_R_HLI:
-        sprintf(str, "%s %s,(%s+)", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s %s,(%s+)", getInstructionName(inst->_instType),
             registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
         return;
 
     case AM_R_HLD:
-        sprintf(str, "%s %s,(%s-)", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s %s,(%s-)", getInstructionName(inst->_instType),
             registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
         return;
 
     case AM_HLI_R:
-        sprintf(str, "%s (%s+),%s", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s (%s+),%s", getInstructionName(inst->_instType),
             registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
         return;
 
     case AM_HLD_R:
-        sprintf(str, "%s (%s-),%s", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s (%s-),%s", getInstructionName(inst->_instType),
             registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
         return;
 
     case AM_A8_R:
-        sprintf(str, "%s $%02X,%s", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s $%02X,%s", getInstructionName(inst->_instType),
             EmuGet()->getCart()->busRead(ctx->_regs._pc - 1), registerTypeTable[inst->_regType1]);
         return;
 
     case AM_HL_SPR:
-        sprintf(str, "%s (%s),SP+%d", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s (%s),SP+%d", getInstructionName(inst->_instType),
             registerTypeTable[inst->_regType0], ctx->_fetchedData & 0xFF);
         return;
 
     case AM_D8:
-        sprintf(str, "%s $%02X", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s $%02X", getInstructionName(inst->_instType),
             ctx->_fetchedData & 0xFF);
         return;
 
     case AM_D16:
-        sprintf(str, "%s $%04X", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s $%04X", getInstructionName(inst->_instType),
             ctx->_fetchedData);
         return;
 
     case AM_MR_D8:
-        sprintf(str, "%s (%s),$%02X", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s (%s),$%02X", getInstructionName(inst->_instType),
             registerTypeTable[inst->_regType0], ctx->_fetchedData & 0xFF);
         return;
 
     case AM_A16_R:
-        sprintf(str, "%s ($%04X),%s", getInstructionName(inst->_instType),
+        snprintf(str, strSize, "%s ($%04X),%s", getInstructionName(inst->_instType),
             ctx->_fetchedData, registerTypeTable[inst->_regType1]);
         return;
 
