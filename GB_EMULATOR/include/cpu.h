@@ -61,7 +61,7 @@ class Cpu {
 #define CPU_FLAG_C BIT(_context._regs._f, 4)
 
 public:
-    Cpu();
+    Cpu() = default;
     ~Cpu() = default;
 
 	void initialize();

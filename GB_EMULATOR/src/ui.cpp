@@ -8,6 +8,10 @@
 #include <SDL.h>
 #include <SDL_ttf.h>
 
+Ui::Ui() {
+    initialize();
+}
+
 void Ui::initialize()
 {
     SDL_Init(SDL_INIT_VIDEO);

@@ -2,16 +2,19 @@
 
 #include <common.h>
 
-class SDL_Window;
-class SDL_Renderer;
-class SDL_Texture;
-class SDL_Surface;
+struct SDL_Window;
+struct SDL_Renderer;
+struct SDL_Texture;
+struct SDL_Surface;
 
 static const s32 SCREEN_WIDTH = 1024;
 static const s32 SCREEN_HEIGHT = 768;
 
 class Ui {
 public:
+	Ui();
+	~Ui() = default;
+
 	void initialize();
 	void handleEvents();
 	void update();

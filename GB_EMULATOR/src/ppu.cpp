@@ -258,7 +258,7 @@ void Ppu::modeHblank()
 
             //calc FPS...
             u32 end = EmuGet()->getUi()->getTicks();
-            u32 frameTime = end - prevFrameTime;
+            u32 frameTime = end - static_cast<u32>(prevFrameTime);
 
             if (frameTime < targetFrameTime) {
                 delay((targetFrameTime - frameTime));

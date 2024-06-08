@@ -56,6 +56,8 @@ namespace {
     "IN_RES",
     "IN_SET"
     };
+
+    
 } // namespace
 
 Instruction::Instruction()
@@ -1225,7 +1227,6 @@ void initializeInstructions()
     g_instructions[0xFF]._regType1 = RT_NONE;
     g_instructions[0xFF]._conditionType = CT_NONE;
     g_instructions[0xFF]._param = 0x38;
-
 }
 
 const char* getInstructionName(InstructionType t)

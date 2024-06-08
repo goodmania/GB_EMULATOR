@@ -16,6 +16,24 @@ namespace {
         RT_A
     };
 
+    static const char* registerNameTable[] = {
+        "<NONE>",
+        "A",
+        "F",
+        "B",
+        "C",
+        "D",
+        "E",
+        "H",
+        "L",
+        "AF",
+        "BC",
+        "DE",
+        "HL",
+        "SP",
+        "PC"
+    };
+
     RegisterType decodeReg(u8 reg) {
         if (reg > 0b111) {
             return RT_NONE;
@@ -36,9 +54,6 @@ namespace {
     static int msgSize = 0;
 #endif
 };
-
-Cpu::Cpu() {
-}
 
 void Cpu::initialize()
 {
@@ -209,6 +224,10 @@ void Cpu::fetchData()
 
     case AM_R:
         _context._fetchedData = readRegister(_context._curInst->_regType0);
+        return;
+
+    case AM_R_R:
+        _context._fetchedData = readRegister(_context._curInst->_regType1);
         return;
 
     case AM_R_D8:
@@ -618,7 +637,7 @@ void Cpu::procLd(CpuContext* ctx) {
             EmuGet()->getCart()->busWrite16(ctx->_memDest, ctx->_fetchedData);
         }
         else {
-            EmuGet()->getCart()->busWrite(ctx->_memDest, ctx->_fetchedData);
+            EmuGet()->getCart()->busWrite(ctx->_memDest, static_cast<u8>(ctx->_fetchedData));
         }
 
         EmuGet()->emuCycles(1);
@@ -987,68 +1006,68 @@ void Cpu::instructionToStr(CpuContext* ctx, char* str, const u8 strSize)
     case AM_R_D16:
     case AM_R_A16:
         snprintf(str, strSize, "%s %s,$%04X", getInstructionName(inst->_instType),
-            registerTypeTable[inst->_regType0], ctx->_fetchedData);
+            registerNameTable[inst->_regType0], ctx->_fetchedData);
         return;
 
     case AM_R:
         snprintf(str, strSize, "%s %s", getInstructionName(inst->_instType),
-            registerTypeTable[inst->_regType0]);
+            registerNameTable[inst->_regType0]);
         return;
 
     case AM_R_R:
         snprintf(str, strSize, "%s %s,%s", getInstructionName(inst->_instType),
-            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+            registerNameTable[inst->_regType0], registerNameTable[inst->_regType1]);
         return;
 
     case AM_MR_R:
         snprintf(str, strSize, "%s (%s),%s", getInstructionName(inst->_instType),
-            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+            registerNameTable[inst->_regType0], registerNameTable[inst->_regType1]);
         return;
 
     case AM_MR:
         snprintf(str, strSize, "%s (%s)", getInstructionName(inst->_instType),
-            registerTypeTable[inst->_regType0]);
+            registerNameTable[inst->_regType0]);
         return;
 
     case AM_R_MR:
         snprintf(str, strSize, "%s %s,(%s)", getInstructionName(inst->_instType),
-            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+            registerNameTable[inst->_regType0], registerNameTable[inst->_regType1]);
         return;
 
     case AM_R_D8:
     case AM_R_A8:
         snprintf(str, strSize, "%s %s,$%02X", getInstructionName(inst->_instType),
-            registerTypeTable[inst->_regType0], ctx->_fetchedData & 0xFF);
+            registerNameTable[inst->_regType0], ctx->_fetchedData & 0xFF);
         return;
 
     case AM_R_HLI:
         snprintf(str, strSize, "%s %s,(%s+)", getInstructionName(inst->_instType),
-            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+            registerNameTable[inst->_regType0], registerNameTable[inst->_regType1]);
         return;
 
     case AM_R_HLD:
         snprintf(str, strSize, "%s %s,(%s-)", getInstructionName(inst->_instType),
-            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+            registerNameTable[inst->_regType0], registerNameTable[inst->_regType1]);
         return;
 
     case AM_HLI_R:
         snprintf(str, strSize, "%s (%s+),%s", getInstructionName(inst->_instType),
-            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+            registerNameTable[inst->_regType0], registerNameTable[inst->_regType1]);
         return;
 
     case AM_HLD_R:
         snprintf(str, strSize, "%s (%s-),%s", getInstructionName(inst->_instType),
-            registerTypeTable[inst->_regType0], registerTypeTable[inst->_regType1]);
+            registerNameTable[inst->_regType0], registerNameTable[inst->_regType1]);
         return;
 
     case AM_A8_R:
         snprintf(str, strSize, "%s $%02X,%s", getInstructionName(inst->_instType),
-            EmuGet()->getCart()->busRead(ctx->_regs._pc - 1), registerTypeTable[inst->_regType1]);
+            EmuGet()->getCart()->busRead(ctx->_regs._pc - 1), registerNameTable[inst->_regType1]);
         return;
 
     case AM_HL_SPR:
         snprintf(str, strSize, "%s (%s),SP+%d", getInstructionName(inst->_instType),
-            registerTypeTable[inst->_regType0], ctx->_fetchedData & 0xFF);
+            registerNameTable[inst->_regType0], ctx->_fetchedData & 0xFF);
         return;
 
     case AM_D8:
@@ -1063,12 +1082,12 @@ void Cpu::instructionToStr(CpuContext* ctx, char* str, const u8 strSize)
 
     case AM_MR_D8:
         snprintf(str, strSize, "%s (%s),$%02X", getInstructionName(inst->_instType),
-            registerTypeTable[inst->_regType0], ctx->_fetchedData & 0xFF);
+            registerNameTable[inst->_regType0], ctx->_fetchedData & 0xFF);
         return;
 
     case AM_A16_R:
         snprintf(str, strSize, "%s ($%04X),%s", getInstructionName(inst->_instType),
-            ctx->_fetchedData, registerTypeTable[inst->_regType1]);
+            ctx->_fetchedData, registerNameTable[inst->_regType1]);
         return;
 
     default:

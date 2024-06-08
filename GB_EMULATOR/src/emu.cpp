@@ -53,6 +53,7 @@ void Emu::initialize()
     {
         _emuContext->_running = true;
         _emuContext->_paused = false;
+        _emuContext->_die = false;
         _emuContext->_ticks = 0;
     }
 }
@@ -107,11 +108,10 @@ s32 Emu::emuRun(s32 argc, char** argv) {
     printf("Cart loaded..\n");
 
     std::thread t1(&Emu::cpuRun, this, nullptr);
-    t1.join();
     
     u32 prevFrame = 0;
     while (!_emuContext->_die) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
         _ui->handleEvents();
 
         if (prevFrame != _ppu->getContext()->_currentFrame) {
@@ -120,6 +120,7 @@ s32 Emu::emuRun(s32 argc, char** argv) {
         prevFrame = _ppu->getContext()->_currentFrame;
     }
 
+    t1.join();
     return 0;
 }
 
