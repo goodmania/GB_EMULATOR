@@ -119,7 +119,6 @@ s32 Emu::emuRun(s32 argc, char** argv) {
         }
         prevFrame = _ppu->getContext()->_currentFrame;
     }
-
     t1.join();
     return 0;
 }

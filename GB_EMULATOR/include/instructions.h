@@ -2,98 +2,110 @@
 
 #include "common.h"
 
+/**
+ * @enum AddressingMode
+ * @brief Enumerates the different addressing modes for instructions.
+ */
 enum AddressingMode{
-    AM_IMP,
-    AM_R_D16,
-    AM_R_R,
-    AM_MR_R,
-    AM_R,
-    AM_R_D8,
-    AM_R_MR,
-    AM_R_HLI,
-    AM_R_HLD,
-    AM_HLI_R,
-    AM_HLD_R,
-    AM_R_A8,
-    AM_A8_R,
-    AM_HL_SPR,
-    AM_D16,
-    AM_D8,
-    AM_D16_R,
-    AM_MR_D8,
-    AM_MR,
-    AM_A16_R,
-    AM_R_A16
+    AM_IMP,     /**< Implied addressing mode */
+    AM_R_D16,   /**< to Register from 16-bit immediate addressing mode */
+    AM_R_R,     /**< Register to register addressing mode */
+    AM_MR_R,    /**< Memory register from register addressing mode */
+    AM_R,       /**< Register addressing mode */
+    AM_R_D8,    /**< Register from 8-bit immediate addressing mode */
+    AM_R_MR,    /**< Register from memory register addressing mode */
+    AM_R_HLI,   /**< Register from HL indirect addressing mode */
+    AM_R_HLD,   /**< Register from HL indirect decrement addressing mode */
+    AM_HLI_R,   /**< HL indirect addressing mode from register */
+    AM_HLD_R,   /**< HL indirect decrement addressing mode from register */
+    AM_R_A8,    /**< Register from 8-bit immediate address addressing mode */
+    AM_A8_R,    /**< 8-bit immediate address from register addressing mode */
+    AM_HL_SPR,  /**< HL register from stack pointer addressing mode */
+    AM_D16,     /**< 16-bit immediate addressing mode */
+    AM_D8,      /**< 8-bit immediate addressing mode */
+    AM_D16_R,   /**< 16-bit immediate from register addressing mode */
+    AM_MR_D8,   /**< Memory register from 8-bit immediate addressing mode */
+    AM_MR,      /**< Memory register addressing mode */
+    AM_A16_R,   /**< 16-bit immediate address from register addressing mode */
+    AM_R_A16    /**< Register from 16-bit immediate address addressing mode */
 };
 
+/**
+ * @enum RegisterType
+ * @brief Enumerates the different register types.
+ */
 enum RegisterType : u16 {
-    RT_NONE,
-    RT_A,
-    RT_F,
-    RT_B,
-    RT_C,
-    RT_D,
-    RT_E,
-    RT_H,
-    RT_L,
-    RT_AF,
-    RT_BC,
-    RT_DE,
-    RT_HL,
-    RT_SP,
-    RT_PC
+    RT_NONE,    /**< No register */
+    RT_A,       /**< Register A */
+    RT_F,       /**< Register F */
+    RT_B,       /**< Register B */
+    RT_C,       /**< Register C */
+    RT_D,       /**< Register D */
+    RT_E,       /**< Register E */
+    RT_H,       /**< Register H */
+    RT_L,       /**< Register L */
+    RT_AF,      /**< Register AF */
+    RT_BC,      /**< Register BC */
+    RT_DE,      /**< Register DE */
+    RT_HL,      /**< Register HL */
+    RT_SP,      /**< Stack Pointer */
+    RT_PC       /**< Program Counter */
 };
 
+/**
+ * @enum InstructionType
+ * @brief Enumerates the different instruction types.
+ */
 enum InstructionType{
-    IN_NONE,
-    IN_NOP,
-    IN_LD,
-    IN_INC,
-    IN_DEC,
-    IN_RLCA,
-    IN_ADD,
-    IN_RRCA,
-    IN_STOP,
-    IN_RLA,
-    IN_JR,
-    IN_RRA,
-    IN_DAA,
-    IN_CPL,
-    IN_SCF,
-    IN_CCF,
-    IN_HALT,
-    IN_ADC,
-    IN_SUB,
-    IN_SBC,
-    IN_AND,
-    IN_XOR,
-    IN_OR,
-    IN_CP,
-    IN_POP,
-    IN_JP,
-    IN_PUSH,
-    IN_RET,
-    IN_CB,
-    IN_CALL,
-    IN_RETI,
-    IN_LDH,
-    IN_JPHL,
-    IN_DI,
-    IN_EI,
-    IN_RST,
-    IN_ERR,
+    IN_NONE,    /**< No instruction */
+    IN_NOP,     /**< No operation instruction */
+    IN_LD,      /**< Load instruction */
+    IN_INC,     /**< Increment instruction */
+    IN_DEC,     /**< Decrement instruction */
+    IN_RLCA,    /**< Rotate left through carry instruction */
+    IN_ADD,     /**< Add instruction */
+    IN_RRCA,    /**< Rotate right through carry instruction */
+    IN_STOP,    /**< Stop instruction */
+    IN_RLA,     /**< Rotate left instruction */
+    IN_JR,      /**< Jump relative instruction */
+    IN_RRA,     /**< Rotate right instruction */
+    IN_DAA,     /**< Decimal adjust accumulator instruction */
+    IN_CPL,     /**< Complement accumulator instruction */
+    IN_SCF,     /**< Set carry flag instruction */
+    IN_CCF,     /**< Complement carry flag instruction */
+    IN_HALT,    /**< Halt instruction */
+    IN_ADC,     /**< Add with carry instruction */
+    IN_SUB,     /**< Subtract instruction */
+    IN_SBC,     /**< Subtract with carry instruction */
+    IN_AND,     /**< Logical AND instruction */
+    IN_XOR,     /**< Logical XOR instruction */
+    IN_OR,      /**< Logical OR instruction */
+    IN_CP,      /**< Compare instruction */
+    IN_POP,     /**< Pop instruction */
+    IN_JP,      /**< Jump instruction */
+    IN_PUSH,    /**< Push instruction */
+    IN_RET,     /**< Return instruction */
+    IN_CB,      /**< CB prefix instruction */
+    IN_CALL,    /**< Call instruction */
+    IN_RETI,    /**< Return from interrupt instruction */
+    IN_LDH,     /**< Load high immediate instruction */
+    IN_JPHL,    /**< Jump to HL instruction */
+    IN_DI,      /**< Disable interrupts instruction */
+    IN_EI,      /**< Enable interrupts instruction */
+    IN_RST,     /**< Restart instruction */
+    IN_ERR,     /**< Error instruction */
     //CB instructions...
-    IN_RLC,
-    IN_RRC,
-    IN_RL,
-    IN_RR,
-    IN_SLA,
-    IN_SRA,
-    IN_SWAP,
-    IN_SRL,
-    IN_BIT,
-    IN_RES,
-    IN_SET,
+    IN_RLC,     /**< Rotate left through carry (CB prefix) instruction */
+    IN_RRC,     /**< Rotate right through carry (CB prefix) instruction */
+    IN_RL,      /**< Rotate left (CB prefix) instruction */
+    IN_RR,      /**< Rotate right (CB prefix) instruction */
+    IN_SLA,     /**< Shift left arithmetic (CB prefix) instruction */
+    IN_SRA,     /**< Shift right arithmetic (CB prefix) instruction */
+    IN_SWAP,    /**< Swap nibbles (CB prefix) instruction */
+    IN_SRL,     /**< Shift right logical (CB prefix) instruction */
+    IN_BIT,     /**< Test bit (CB prefix) instruction */
+    IN_RES,     /**< Reset bit (CB prefix) instruction */
+    IN_SET      /**< Set bit (CB prefix) instruction */
 };
 
 struct InstructionInfo {

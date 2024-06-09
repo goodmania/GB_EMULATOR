@@ -113,6 +113,16 @@ static std::map<u32, const char*> LIC_CODE = {
 };
 } // namespace
 
+Cart::~Cart()
+{
+    for (s32 i = 0; i < 16; i++) {
+		if (_context._ramBanks[i]) {
+			delete _context._ramBanks[i];
+		}
+	}
+    delete[] _context._romData;
+}
+
 void Cart::initialize()
 {
 
@@ -142,6 +152,8 @@ bool Cart::load(char* cart)
 
     _context._header = (RomHeader*)(_context._romData + 0x100);
     _context._header->_title[15] = 0;
+    _context._battery = battery();
+    _context._needSave = false;
 
     printf("Cartridge Loaded:\n");
     printf("\t Title    : %s\n", _context._header->_title);
@@ -150,6 +162,8 @@ bool Cart::load(char* cart)
     printf("\t RAM Size : %2.2X\n", _context._header->_ramSize);
     printf("\t LIC Code : %2.2X (%s)\n", _context._header->_licCode, cartLicName());
     printf("\t ROM Vers : %2.2X\n", _context._header->_version);
+
+    setupBanking();
 
     u16 x = 0;
     for (u16 i = 0x0134; i <= 0x014C; i++) {
@@ -163,6 +177,7 @@ bool Cart::load(char* cart)
 
 u8 Cart::read(u16 address)
 {
+    // MBC1（Memory Bank Controller 1）が使用されていない場合、またはアドレスが0x4000未満の場合には、カートリッジのROMデータをそのまま返します。 
     if (!mbc1() || address < 0x4000) {
         return _context._romData[address];
     }
@@ -261,6 +276,24 @@ bool Cart::mbc1() {
 bool Cart::battery() {
     //mbc1 only for now...
     return _context._header->_type == 3;
+}
+
+void Cart::setupBanking()
+{
+    for (s32 i = 0; i < 16; i++) {
+        _context._ramBanks[i] = 0;
+
+        if ((_context._header->_ramSize == 2 && i == 0) ||
+            (_context._header->_ramSize == 3 && i < 4) ||
+            (_context._header->_ramSize == 4 && i < 16) ||
+            (_context._header->_ramSize == 5 && i < 8)) {
+            _context._ramBanks[i] = new u8[0x2000];
+            memset(_context._ramBanks[i], 0, 0x2000);
+        }
+    }
+
+    _context._ramBank = _context._ramBanks[0];
+    _context._romBankX = _context._romData + 0x4000; //rom bank 1
 }
 
 void Cart::batteryLoad()

@@ -4,7 +4,7 @@
 #include "common.h"
 #include "instructions.h"
 
-#define CPU_DEBUG 1
+#define CPU_DEBUG 0
 
 class Emu;
 class Timer;
@@ -34,23 +34,25 @@ struct CpuRegisters {
     u16 _sp;
 };
 
+/**
+ * @brief The context of the CPU.
+ */
 struct CpuContext {
-    CpuRegisters _regs;
+    CpuRegisters _regs; /**< The CPU registers. */
 
-    //current fetch...
-    u16 _fetchedData;
-    u16 _memDest;
-    bool _destIsMem;
-    u8 _curOpcode;
-    Instruction* _curInst;
+    u16 _fetchedData; /**< The currently fetched data. */
+    u16 _memDest; /**< The memory destination. */
+    bool _destIsMem; /**< Flag indicating if the destination is memory. */
+    u8 _curOpcode; /**< The current opcode. */
+    Instruction* _curInst; /**< The current instruction. */
 
-    bool _halted;
-    bool _stepping;
+    bool _halted; /**< Flag indicating if the CPU is halted. */
+    bool _stepping; /**< Flag indicating if the CPU is in stepping mode. */
 
-    bool _intMasterEnabled;
-    bool _enablingIme;
-    u8 _ieRegister;
-    u8 _intFlags;
+    bool _intMasterEnabled; /**< Flag controlling whether the CPU accepts interrupts. If IME is enabled, the CPU accepts interrupts. If IME is disabled, the CPU ignores interrupts. */
+    bool _enablingIme; /**< Flag indicating if IME will be enabled after the next instruction. */
+    u8 _ieRegister; /**< The interrupt enable register. */
+    u8 _intFlags; /**< The interrupt flags register. */
 };
 
 class Cpu {
@@ -67,40 +69,249 @@ public:
 	void initialize();
 	bool step();
    
-    void procNone(CpuContext* ctx);
-    void procNop(CpuContext* ctx);
-    void procCb(CpuContext* ctx);
-    void procRlca(CpuContext* ctx);
-    void procRrca(CpuContext* ctx);
-    void procStop(CpuContext* ctx);
-    void procDaa(CpuContext* ctx);
+    /**
+     * Executes the "NOP" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
+    void procNone(CpuContext* ctx); // NOP
+
+    /**
+     * Executes the "NOP" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
+    void procNop(CpuContext* ctx); // NOP
+
+    /**
+     * Executes the "CB" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
+    void procCb(CpuContext* ctx); // CB
+
+    /**
+     * Executes the "RLCA" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
+    void procRlca(CpuContext* ctx); // RLCA
+
+    /**
+     * Executes the "RRCA" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
+    void procRrca(CpuContext* ctx); // RRCA
+
+    /**
+     * Executes the "STOP" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
+    void procStop(CpuContext* ctx); // STOP
+
+    /**
+     * Executes the "DAA" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
+    void procDaa(CpuContext* ctx); // DAA
+
+    /**
+     * Executes the "CPL" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procCpl(CpuContext* ctx);
+
+    /**
+     * Executes the "SCF" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procScf(CpuContext* ctx);
+
+    /**
+     * Executes the "CCF" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procCcf(CpuContext* ctx);
+
+    /**
+     * Executes the "HALT" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procHalt(CpuContext* ctx);
+
+    /**
+     * Executes the "RRA" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procRra(CpuContext* ctx);
+
+    /**
+     * Executes the "RLA" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procRla(CpuContext* ctx);
+
+    /**
+     * Executes the "AND" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procAnd(CpuContext* ctx);
+
+    /**
+     * Executes the "XOR" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procXor(CpuContext* ctx);
+
+    /**
+     * Executes the "OR" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procOr(CpuContext* ctx);
+
+    /**
+     * Executes the "CP" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procCp(CpuContext* ctx);
+
+    /**
+     * Executes the "DI" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procDi(CpuContext* ctx);
+
+    /**
+     * Executes the "EI" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procEi(CpuContext* ctx);
+
+    /**
+     * Executes the "LD" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procLd(CpuContext* ctx);
+
+    /**
+     * Executes the "LDH" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procLdh(CpuContext* ctx);
+
+    /**
+     * Executes the "JP" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procJp(CpuContext* ctx);
+
+    /**
+     * Executes the "JR" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procJr(CpuContext* ctx);
+
+    /**
+     * Executes the "CALL" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procCall(CpuContext* ctx);
+
+    /**
+     * Executes the "RST" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procRst(CpuContext* ctx);
+
+    /**
+     * Executes the "RET" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procRet(CpuContext* ctx);
+
+    /**
+     * Executes the "RETI" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procReti(CpuContext* ctx);
+
+    /**
+     * Executes the "POP" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procPop(CpuContext* ctx);
+
+    /**
+     * Executes the "PUSH" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procPush(CpuContext* ctx);
+
+    /**
+     * Executes the "INC" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procInc(CpuContext* ctx);
+
+    /**
+     * Executes the "DEC" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procDec(CpuContext* ctx);
+
+    /**
+     * Executes the "SUB" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procSub(CpuContext* ctx);
+
+    /**
+     * Executes the "ADC" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procAdc(CpuContext* ctx);
+
+    /**
+     * Executes the "ADD" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procAdd(CpuContext* ctx);
+
+    /**
+     * Executes the "SBC" instruction.
+     * 
+     * @param ctx The CPU context.
+     */
     void procSbc(CpuContext* ctx);
 
     void setFlags(CpuContext* ctx, s8 z, s8 n, s8 h, s8 c);

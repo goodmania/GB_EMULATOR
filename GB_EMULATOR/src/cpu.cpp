@@ -59,10 +59,10 @@ void Cpu::initialize()
 {
     _context._regs._pc = 0x100;
     _context._regs._sp = 0xFFFE;
-    *((short*)&_context._regs._a) = 0xB001; 
-    *((short*)&_context._regs._b) = 0x1300;
-    *((short*)&_context._regs._d) = 0xD800;
-    *((short*)&_context._regs._h) = 0x4D01;
+    *((short*)&_context._regs._a) = static_cast<u16>(0xB001); 
+    *((short*)&_context._regs._b) = static_cast<u16>(0x1300);
+    *((short*)&_context._regs._d) = static_cast<u16>(0xD800);
+    *((short*)&_context._regs._h) = static_cast<u16>(0x4D01);
     _context._ieRegister = 0;
     _context._intFlags = 0;
     _context._intMasterEnabled = false;
@@ -73,7 +73,7 @@ void Cpu::initialize()
 
 void Cpu::initializeProcessors()
 {
-    _processors[IN_NONE] = &Cpu::procNone;
+    _processors[IN_NONE] = &Cpu::procNone; 
     _processors[IN_NOP] = &Cpu::procNop;
     _processors[IN_LD] = &Cpu::procLd;
     _processors[IN_LDH] = &Cpu::procLdh;
@@ -119,7 +119,7 @@ void Cpu::execute() {
 
     (this->*proc)(&_context);
 }
-
+#if CPU_DEBUG
 void Cpu::DEBUG_update()
 {
     if (EmuGet()->getCart()->busRead(0xFF02) == 0x81) {
@@ -137,7 +137,7 @@ void Cpu::DEBUG_print()
         printf("DBG: %s\n", DEBUG_msg);
     }
 }
-
+#endif
 IN_PROC Cpu::getProcessorByInstructionType(InstructionType& instType)
 {
     return _processors[instType];
@@ -167,8 +167,14 @@ bool Cpu::step()
          
         printf("%llu - %04X: %-12s (%02X %02X %02X) A: %02X F: %s BC: %02X%02X DE: %02X%02X HL: %02X%02X\n",
             EmuGet()->getEmuContext()->_ticks,
-            pc, inst, _context._curOpcode,
-            EmuGet()->getCart()->busRead(pc + 1), EmuGet()->getCart()->busRead(pc + 2), _context._regs._a, flags, _context._regs._b, _context._regs._c,
+            pc,
+            inst,
+            _context._curOpcode, // (_curOpcode, next inst, next next inst)
+            EmuGet()->getCart()->busRead(pc + 1),
+            EmuGet()->getCart()->busRead(pc + 2),
+            _context._regs._a,
+            flags,
+            _context._regs._b, _context._regs._c,
             _context._regs._d, _context._regs._e, _context._regs._h, _context._regs._l);
 #endif
 
@@ -176,10 +182,10 @@ bool Cpu::step()
             printf("Unknown Instruction! %02X\n", _context._curOpcode);
             exit(-7);
         }
-
+#if CPU_DEBUG
         DEBUG_update();
         DEBUG_print();
-
+#endif
         execute();
     }
     else {
@@ -205,7 +211,9 @@ bool Cpu::step()
 
 void Cpu::fetchInstruction()
 {
-    _context._curOpcode = EmuGet()->getCart()->busRead(_context._regs._pc++);
+    Cart* cart = EmuGet()->getCart();
+
+    _context._curOpcode = cart->busRead(_context._regs._pc++);
     _context._curInst = getInstructionByOpcode(_context._curOpcode);
 }
 
@@ -652,18 +660,18 @@ void Cpu::procLd(CpuContext* ctx) {
             (ctx->_fetchedData & 0xFF) >= 0x100;
 
         setFlags(ctx, 0, 0, hflag, cflag);
-        setRegister(ctx->_curInst->_regType1,
+        setRegister(ctx->_curInst->_regType0,
             readRegister(ctx->_curInst->_regType1) + (int8_t)ctx->_fetchedData);
 
         return;
     }
 
-    setRegister(ctx->_curInst->_regType1, ctx->_fetchedData);
+    setRegister(ctx->_curInst->_regType0, ctx->_fetchedData);
 }
 
 void Cpu::procLdh(CpuContext* ctx) {
-    if (ctx->_curInst->_regType1 == RT_A) {
-        setRegister(ctx->_curInst->_regType1, EmuGet()->getCart()->busRead(0xFF00 | ctx->_fetchedData));
+    if (ctx->_curInst->_regType0 == RT_A) {
+        setRegister(ctx->_curInst->_regType0, EmuGet()->getCart()->busRead(0xFF00 | ctx->_fetchedData));
     }
     else {
         EmuGet()->getCart()->busWrite(ctx->_memDest, ctx->_regs._a);
@@ -703,7 +711,7 @@ void Cpu::procJp(CpuContext* ctx) {
 }
 
 void Cpu::procJr(CpuContext* ctx) {
-    int8_t rel = (int8_t)(ctx->_fetchedData & 0xFF);
+    s8 rel = (s8)(ctx->_fetchedData & 0xFF);
     u16 addr = ctx->_regs._pc + rel;
     gotoAddr(ctx, addr, false);
 }

@@ -3,10 +3,10 @@
 #include <common.h>
 
 struct TimerContext {
-	u16 _div;
-	u8 _tima;
-	u8 _tma;
-	u8 _tac;
+	u16 _div; // Divider Register
+	u8 _tima; // Timer Counter
+	u8 _tma; // Timer Modulo
+	u8 _tac; // Timer Control
 };
 
 class Timer {

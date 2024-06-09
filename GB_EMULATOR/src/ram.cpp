@@ -1,7 +1,10 @@
 #include "ram.h"
+#include "memory"
 
 Ram::Ram()
 {
+	memset(_wram, 0, sizeof(_wram));
+	memset(_hram, 0, sizeof(_hram));
 }
 
 u8 Ram::wramRead(u16 address)
