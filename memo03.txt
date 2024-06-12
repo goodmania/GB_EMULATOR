@@ -1,0 +1,4 @@
+000573BC - CB35: POP AF      (F1 F1 C3) A : FF F : ---- BC : 00 FF DE : CB 0C HL : CB 14 SP : DFED MD : 0000 HLは"CB15"なので1おかしい
+000573DC - CB37: JP $C796    (C3 96 C7) A : 30 F : -NH- BC : 00 FF DE : CB 0C HL : CB 14 SP : DFF1 MD : 0000 Aは33
+
+CB23 ~ CB37 の間で A,HLレジスタの値が不正になっている。

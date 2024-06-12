@@ -4,7 +4,7 @@
 
 Timer::Timer()
 {
-    initialize();
+    
 }
 
 void Timer::initialize()
@@ -19,10 +19,10 @@ void Timer::tick()
     _context._div++;
 
     bool timerUpdate = false;
-
+    
     switch (_context._tac & (0b11)) {
     case 0b00:
-        timerUpdate = (prevDiv & (1 << 9)) && (!(_context._div & (1 << 9)));
+        timerUpdate = (prevDiv & (1 << 9)) && (!(_context._div & (1 << 9))); // 1024Hzに一回 timer を更新する
         break;
     case 0b01:
         timerUpdate = (prevDiv & (1 << 3)) && (!(_context._div & (1 << 3)));
@@ -36,10 +36,10 @@ void Timer::tick()
     }
 
     if (timerUpdate && _context._tac & (1 << 2)) {
-        _context._tima++;
+        _context._tima++; // tima を1増やす
 
-        if (_context._tima == 0xFF) {
-            _context._tima = _context._tma;
+        if (_context._tima == 0xFF) { // tima が 0xFF になったら
+            _context._tima = _context._tma; // tma の値を tima に代入してリセットし、割り込みを要求する
             EmuGet()->getCpu()->requestInterrupt(IT_TIMER);
         }
     }
@@ -80,5 +80,7 @@ u8 Timer::read(u16 address)
         return _context._tma;
     case 0xFF07:
         return _context._tac;
+    default:
+        printf("invalid timer address.");
     }
 }

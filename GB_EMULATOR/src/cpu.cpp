@@ -2,6 +2,7 @@
 #include "cpu.h"
 #include "timer.h"
 #include "cart.h"
+#include "logger.h"
 
 namespace {
 
@@ -59,10 +60,17 @@ void Cpu::initialize()
 {
     _context._regs._pc = 0x100;
     _context._regs._sp = 0xFFFE;
-    *((short*)&_context._regs._a) = static_cast<u16>(0xB001); 
+#if USE_LOG_TOOL
+    *((short*)&_context._regs._a) = static_cast<u16>(0xB001);
     *((short*)&_context._regs._b) = static_cast<u16>(0x1300);
     *((short*)&_context._regs._d) = static_cast<u16>(0xD800);
     *((short*)&_context._regs._h) = static_cast<u16>(0x4D01);
+#else
+    *((short*)&_context._regs._a) = static_cast<u16>(0x8011); 
+    *((short*)&_context._regs._b) = static_cast<u16>(0x0000);
+    *((short*)&_context._regs._d) = static_cast<u16>(0x56FF);
+    *((short*)&_context._regs._h) = static_cast<u16>(0x0D00);
+#endif
     _context._ieRegister = 0;
     _context._intFlags = 0;
     _context._intMasterEnabled = false;
@@ -73,8 +81,8 @@ void Cpu::initialize()
 
 void Cpu::initializeProcessors()
 {
-    _processors[IN_NONE] = &Cpu::procNone; 
-    _processors[IN_NOP] = &Cpu::procNop;
+    _processors[IN_NONE] = &Cpu::procNone; // OK
+    _processors[IN_NOP] = &Cpu::procNop; // OK
     _processors[IN_LD] = &Cpu::procLd;
     _processors[IN_LDH] = &Cpu::procLdh;
     _processors[IN_JP] = &Cpu::procJp;
@@ -148,9 +156,37 @@ bool Cpu::step()
     if (!_context._halted) {
         u16 pc = _context._regs._pc;
 
+#if USE_LOG_TOOL
+        const u8 dtmSize = 128;
+        char debugToolmessage[dtmSize];
+        sprintf_s(debugToolmessage, "A:%02X F:%02X B:%02X C:%02X D:%02X E:%02X H:%02X L:%02X SP:%04X PC:%04X PCMEM:%02X,%02X,%02X,%02X",
+            _context._regs._a, _context._regs._f,
+            _context._regs._b, _context._regs._c,
+            _context._regs._d, _context._regs._e,
+            _context._regs._h, _context._regs._l,
+            _context._regs._sp, _context._regs._pc,
+            EmuGet()->getCart()->busRead(pc),
+            EmuGet()->getCart()->busRead(pc + 1),
+            EmuGet()->getCart()->busRead(pc + 2),
+            EmuGet()->getCart()->busRead(pc + 3)
+        );
+        Logger::GetInstance().writeLog(debugToolmessage);
+#endif
+
         fetchInstruction();
         EmuGet()->emuCycles(1);
         fetchData();
+
+        if (_context._regs._h == 0xDB && _context._regs._l == 0xED) {
+            //printf("DBED: %02X\n", _context._memDest);
+        }
+        if (_context._memDest == 0xDBED) {
+            //printf("DBED: %02X\n", _context._memDest);
+        }
+
+        if (_context._regs._pc == 0xC69D) {
+            printf("A1C6\n");
+        }
 
 #if CPU_DEBUG
         char flags[16];
@@ -160,32 +196,39 @@ bool Cpu::step()
             _context._regs._f & (1 << 5) ? 'H' : '-',
             _context._regs._f & (1 << 4) ? 'C' : '-'
         );
+        if (true) {
+//        if (_context._curOpcode == 0x33) {
 
-        const u8 instSize = 16;
-        char inst[instSize];
-        instructionToStr(&_context, inst, instSize);
-         
-        printf("%llu - %04X: %-12s (%02X %02X %02X) A: %02X F: %s BC: %02X%02X DE: %02X%02X HL: %02X%02X\n",
-            EmuGet()->getEmuContext()->_ticks,
-            pc,
-            inst,
-            _context._curOpcode, // (_curOpcode, next inst, next next inst)
-            EmuGet()->getCart()->busRead(pc + 1),
-            EmuGet()->getCart()->busRead(pc + 2),
-            _context._regs._a,
-            flags,
-            _context._regs._b, _context._regs._c,
-            _context._regs._d, _context._regs._e, _context._regs._h, _context._regs._l);
+            const u8 instSize = 64;
+            char inst[instSize];
+            instructionToStr(&_context, inst, instSize);
+
+            printf("% 08lX - % 04X: % -12s(% 02X % 02X % 02X) A : % 02X F : % s BC : % 02X % 02X DE : % 02X % 02X HL : % 02X % 02X SP : % 04X MD : % 04X\n",
+                EmuGet()->getEmuContext()->_ticks,
+                pc,
+                inst,
+                _context._curOpcode, 
+                EmuGet()->getCart()->busRead(pc + 1),
+                EmuGet()->getCart()->busRead(pc + 2),
+                _context._regs._a,
+                flags,
+                _context._regs._b, _context._regs._c,
+                _context._regs._d, _context._regs._e, _context._regs._h, _context._regs._l,_context._regs._sp, _context._memDest
+            );
 #endif
+            
+            if (!_context._curInst) {
+                printf("Unknown Instruction! %02X\n", _context._curOpcode);
+                exit(-7);
+            }
 
-        if (!_context._curInst) {
-            printf("Unknown Instruction! %02X\n", _context._curOpcode);
-            exit(-7);
-        }
+
 #if CPU_DEBUG
-        DEBUG_update();
-        DEBUG_print();
+            DEBUG_update();
+            DEBUG_print();
+        }
 #endif
+
         execute();
     }
     else {
@@ -264,17 +307,23 @@ void Cpu::fetchData()
         _context._memDest = readRegister(_context._curInst->_regType0);
         _context._destIsMem = true;
 
-        if (_context._curInst->_regType1 == RT_C) {
+        if (_context._memDest < 0x100) {
             _context._memDest |= 0xFF00;
+        }
+
+        if (_context._curInst->_regType1 == RT_C) {
+            
         }
         return;
     }
 
     case AM_R_MR: {
         u16 addr = readRegister(_context._curInst->_regType1);
-
-        if (_context._curInst->_regType1 == RT_C) {
+        if (addr < 0x100) {
             addr |= 0xFF00;
+        }
+        if (_context._curInst->_regType1 == RT_C) {
+            
         }
 
         _context._fetchedData = cart->busRead(addr);
@@ -284,13 +333,13 @@ void Cpu::fetchData()
     
     case AM_R_HLI:
         _context._fetchedData = cart->busRead(readRegister(_context._curInst->_regType1));
-        EmuGet()->emuCycles(1);;
+        EmuGet()->emuCycles(1);
         setRegister(RT_HL, readRegister(RT_HL) + 1);
         return;
 
     case AM_R_HLD:
         _context._fetchedData = cart->busRead(readRegister(_context._curInst->_regType1));
-        EmuGet()->emuCycles(1);;
+        EmuGet()->emuCycles(1);
         setRegister(RT_HL, readRegister(RT_HL) - 1);
         return;
 
@@ -346,8 +395,8 @@ void Cpu::fetchData()
 
         _context._regs._pc += 2;
         _context._fetchedData = readRegister(_context._curInst->_regType1);
-
-    } return;
+        return;
+    } 
 
     case AM_MR_D8:
         _context._fetchedData = cart->busRead(_context._regs._pc);
@@ -361,7 +410,7 @@ void Cpu::fetchData()
         _context._memDest = readRegister(_context._curInst->_regType0);
         _context._destIsMem = true;
         _context._fetchedData = cart->busRead(readRegister(_context._curInst->_regType0));
-        EmuGet()->emuCycles(1);;
+        EmuGet()->emuCycles(1);
         return;
 
     case AM_R_A16: {
@@ -375,6 +424,10 @@ void Cpu::fetchData()
 
         _context._regs._pc += 2;
         _context._fetchedData = cart->busRead(addr);
+        if (_context._fetchedData == 0xDC && _context._regs._a == 0x14) {
+            printf("a\n"); //FF91 をフェッチ
+		}
+		
         EmuGet()->emuCycles(1);
 
         return;
@@ -417,7 +470,7 @@ void Cpu::procNop(CpuContext* ctx)
 }
 
 void Cpu::procCb(CpuContext* ctx) {
-    u16 op = ctx->_fetchedData;
+    u8 op = ctx->_fetchedData;
     RegisterType regType = decodeReg(op & 0b111);
     u8 bit = (op >> 3) & 0b111;
     u8 bitOp = (op >> 6) & 0b11;
@@ -448,7 +501,7 @@ void Cpu::procCb(CpuContext* ctx) {
         return;
     }
 
-    bool flagC = BIT(ctx->_regs._f, 4);
+    bool flagC = getCarryFlag(&_context);
 
     switch (bit) {
     case 0: {
@@ -554,18 +607,18 @@ void Cpu::procStop(CpuContext* ctx) {
 
 void Cpu::procDaa(CpuContext* ctx) {
     u8 u = 0;
-    u32 fc = 0;
+    int fc = 0;
 
-    if (CPU_FLAG_H || (!CPU_FLAG_N && (ctx->_regs._a & 0xF) > 9)) {
+    if (getHalfCarryFlag(ctx) || (!getSubtractFlag(ctx) && (ctx->_regs._a & 0xF) > 9)) {
         u = 6;
     }
 
-    if (CPU_FLAG_C || (!CPU_FLAG_N && ctx->_regs._a > 0x99)) {
+    if (getCarryFlag(ctx) || (!getSubtractFlag(ctx) && ctx->_regs._a > 0x99)) {
         u |= 0x60;
         fc = 1;
     }
 
-    ctx->_regs._a += CPU_FLAG_N ? -u : u;
+    ctx->_regs._a += getSubtractFlag(ctx) ? -u : u;
 
     setFlags(ctx, ctx->_regs._a == 0, -1, 0, fc);
 }
@@ -580,7 +633,7 @@ void Cpu::procScf(CpuContext* ctx) {
 }
 
 void Cpu::procCcf(CpuContext* ctx) {
-    setFlags(ctx, -1, 0, 0, CPU_FLAG_C ^ 1);
+    setFlags(ctx, -1, 0, 0, getCarryFlag(ctx) ^ 1);
 }
 
 void Cpu::procHalt(CpuContext* ctx) {
@@ -588,7 +641,7 @@ void Cpu::procHalt(CpuContext* ctx) {
 }
 
 void Cpu::procRra(CpuContext* ctx) {
-    u8 carry = CPU_FLAG_C;
+    u8 carry = getCarryFlag(ctx);
     u8 newC = ctx->_regs._a & 1;
 
     ctx->_regs._a >>= 1;
@@ -599,7 +652,7 @@ void Cpu::procRra(CpuContext* ctx) {
 
 void Cpu::procRla(CpuContext* ctx) {
     u8 u = ctx->_regs._a;
-    u8 cf = CPU_FLAG_C;
+    u8 cf = getCarryFlag(ctx);
     u8 c = (u >> 7) & 1;
 
     ctx->_regs._a = (u << 1) | cf;
@@ -612,7 +665,8 @@ void Cpu::procAnd(CpuContext* ctx) {
 }
 
 void Cpu::procXor(CpuContext* ctx) {
-    ctx->_regs._a ^= ctx->_fetchedData & 0xFF;
+    u8 data = ctx->_fetchedData & 0xFF;
+    ctx->_regs._a ^= data;
     setFlags(ctx, ctx->_regs._a == 0, 0, 0, 0);
 }
 
@@ -622,9 +676,9 @@ void Cpu::procOr(CpuContext* ctx) {
 }
 
 void Cpu::procCp(CpuContext* ctx) {
-    s32 n = (s32)ctx->_regs._a - (s32)ctx->_fetchedData;
+    int n = (int)ctx->_regs._a - (int)ctx->_fetchedData;
     setFlags(ctx, n == 0, 1,
-        ((s32)ctx->_regs._a & 0x0F) - ((s32)ctx->_fetchedData & 0x0F) < 0, n < 0);
+        ((int)ctx->_regs._a & 0x0F) - ((int)ctx->_fetchedData & 0x0F) < 0, n < 0);
 }
 
 void Cpu::procDi(CpuContext* ctx) {
@@ -645,7 +699,7 @@ void Cpu::procLd(CpuContext* ctx) {
             EmuGet()->getCart()->busWrite16(ctx->_memDest, ctx->_fetchedData);
         }
         else {
-            EmuGet()->getCart()->busWrite(ctx->_memDest, static_cast<u8>(ctx->_fetchedData));
+            EmuGet()->getCart()->busWrite(ctx->_memDest, ctx->_fetchedData);
         }
 
         EmuGet()->emuCycles(1);
@@ -680,8 +734,8 @@ void Cpu::procLdh(CpuContext* ctx) {
 }
 
 bool Cpu::checkCond(CpuContext* ctx) {
-    bool z = CPU_FLAG_Z;
-    bool c = CPU_FLAG_C;
+    bool z = getZeroFlag(ctx);
+    bool c = getCarryFlag(ctx);
 
     switch (ctx->_curInst->_conditionType) {
     case CT_NONE: return true;
@@ -711,7 +765,7 @@ void Cpu::procJp(CpuContext* ctx) {
 }
 
 void Cpu::procJr(CpuContext* ctx) {
-    s8 rel = (s8)(ctx->_fetchedData & 0xFF);
+    int8_t rel = (int8_t)(ctx->_fetchedData & 0xFF);
     u16 addr = ctx->_regs._pc + rel;
     gotoAddr(ctx, addr, false);
 }
@@ -775,7 +829,7 @@ void Cpu::procPush(CpuContext* ctx) {
 }
 
 void Cpu::procInc(CpuContext* ctx) {
-    u16 val = readRegister(ctx->_curInst->_regType0) + 1;
+    u16 val = (readRegister(ctx->_curInst->_regType0) + 1);
 
     if (is16Bit(ctx->_curInst->_regType0)) {
         EmuGet()->emuCycles(1);
@@ -833,14 +887,14 @@ void Cpu::procSub(CpuContext* ctx) {
 }
 
 void Cpu::procSbc(CpuContext* ctx) {
-    u8 val = ctx->_fetchedData + CPU_FLAG_C;
+    u8 val = ctx->_fetchedData + getCarryFlag(ctx);
 
     int z = readRegister(ctx->_curInst->_regType0) - val == 0;
 
     int h = ((int)readRegister(ctx->_curInst->_regType0) & 0xF)
-        - ((int)ctx->_fetchedData & 0xF) - ((int)CPU_FLAG_C) < 0;
+        - ((int)ctx->_fetchedData & 0xF) - ((int)getCarryFlag(ctx)) < 0;
     int c = ((int)readRegister(ctx->_curInst->_regType0))
-        - ((int)ctx->_fetchedData) - ((int)CPU_FLAG_C) < 0;
+        - ((int)ctx->_fetchedData) - ((int)getCarryFlag(ctx)) < 0;
 
     setRegister(ctx->_curInst->_regType0, readRegister(ctx->_curInst->_regType0) - val);
     setFlags(ctx, z, 1, h, c);
@@ -849,7 +903,7 @@ void Cpu::procSbc(CpuContext* ctx) {
 void Cpu::procAdc(CpuContext* ctx) {
     u16 u = ctx->_fetchedData;
     u16 a = ctx->_regs._a;
-    u16 c = CPU_FLAG_C;
+    u16 c = getCarryFlag(ctx);
 
     ctx->_regs._a = (a + u + c) & 0xFF;
 

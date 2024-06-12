@@ -5,6 +5,7 @@
 #include "instructions.h"
 
 #define CPU_DEBUG 0
+#define USE_LOG_TOOL 1
 
 class Emu;
 class Timer;
@@ -22,8 +23,24 @@ enum InterruptType : u8{
 } ;
 
 struct CpuRegisters {
-    u8 _a;
-    u8 _f;
+    u8 _a; 
+    u8 _f; 
+    /* _f is a flag register with the following layout:
+    *   Bit 7: Zero Flag (Z) 
+            このビットは、演算結果が0の場合にのみセットされる。条件付きジャンプで使用される。
+    *   Bit 6: Subtract Flag (N)
+    *   Bit 5: Half Carry Flag (H)
+    *       これらのフラグは DAA 命令でのみ使用される。
+            Nは直前の命令が減算であったかどうかを示し、
+            Hは結果の下位4ビットのキャリーを示す。
+    *   Bit 4: Carry Flag (C)
+    *       このような場合に設定される：
+    *           8ビットの加算結果が$FFより大きいとき。
+    *           16ビット加算の結果が$FFFFより大きいとき。
+    *           減算や比較の結果が0より小さいとき
+    *           回転/シフト演算が 「1 」ビットをシフトアウトするとき。
+    *           条件付きジャンプやADC、SBC、RL、RLAなどの命令で使用される。
+    */
     u8 _b;
     u8 _c;
     u8 _d;
@@ -31,7 +48,7 @@ struct CpuRegisters {
     u8 _h;
     u8 _l;
     u16 _pc;
-    u16 _sp;
+    u16 _sp; // 
 };
 
 /**
@@ -49,19 +66,27 @@ struct CpuContext {
     bool _halted; /**< Flag indicating if the CPU is halted. */
     bool _stepping; /**< Flag indicating if the CPU is in stepping mode. */
 
-    bool _intMasterEnabled; /**< Flag controlling whether the CPU accepts interrupts. If IME is enabled, the CPU accepts interrupts. If IME is disabled, the CPU ignores interrupts. */
+    bool _intMasterEnabled; /**< Flag controlling whether the CPU accepts interrupts. */
     bool _enablingIme; /**< Flag indicating if IME will be enabled after the next instruction. */
+    /*
+    * Bit 0: V-Blank  Controls whether the VBlank interrupt handler may be called
+    * Bit 1: LCD      Controls whether the LCD interrupt handler may be called
+    * Bit 2: Timer    Controls whether the Timer interrupt handler may be called
+    * Bit 3: Serial   Controls whether the Serial interrupt handler may be called
+    * Bit 4: Joypad   Controls whether the Joypad interrupt handler may be called
+    */
     u8 _ieRegister; /**< The interrupt enable register. */
+    /*
+    * Bit 0: V-Blank  Controls whether the VBlank interrupt handler is being requested.
+    * Bit 1: LCD      Controls whether the LCD interrupt handler is being requested.
+    * Bit 2: Timer    Controls whether the Timer interrupt handler is being requested.
+    * Bit 3: Serial   Controls whether the Serial interrupt handler is being requested.
+    * Bit 4: Joypad   Controls whether the Joypad interrupt handler is being requested.
+    */
     u8 _intFlags; /**< The interrupt flags register. */
 };
 
 class Cpu {
-
-#define CPU_FLAG_Z BIT(_context._regs._f, 7)
-#define CPU_FLAG_N BIT(_context._regs._f, 6)
-#define CPU_FLAG_H BIT(_context._regs._f, 5)
-#define CPU_FLAG_C BIT(_context._regs._f, 4)
-
 public:
     Cpu() = default;
     ~Cpu() = default;
@@ -353,6 +378,46 @@ private:
     void DEBUG_print();
 #endif
     IN_PROC getProcessorByInstructionType(InstructionType& instType);
+
+    /**
+ * Retrieves the value of the Zero Flag (Z) from the flag register.
+ *
+ * @param ctx The CPU context.
+ * @return True if the Zero Flag is set, false otherwise.
+ */
+    bool getZeroFlag(CpuContext* ctx) {
+        return BIT(ctx->_regs._f, 7);
+    }
+
+    /**
+     * Retrieves the value of the Subtract Flag (N) from the flag register.
+     *
+     * @param ctx The CPU context.
+     * @return True if the Subtract Flag is set, false otherwise.
+     */
+    bool getSubtractFlag(CpuContext* ctx) {
+        return BIT(ctx->_regs._f, 6);
+    }
+
+    /**
+     * Retrieves the value of the Half Carry Flag (H) from the flag register.
+     *
+     * @param ctx The CPU context.
+     * @return True if the Half Carry Flag is set, false otherwise.
+     */
+    bool getHalfCarryFlag(CpuContext* ctx) {
+        return BIT(ctx->_regs._f, 5);
+    }
+
+    /**
+     * Retrieves the value of the Carry Flag (C) from the flag register.
+     *
+     * @param ctx The CPU context.
+     * @return True if the Carry Flag is set, false otherwise.
+     */
+    bool getCarryFlag(CpuContext* ctx) {
+        return BIT(ctx->_regs._f, 4);
+    }
 
     CpuContext _context;
     std::map<InstructionType, IN_PROC> _processors;

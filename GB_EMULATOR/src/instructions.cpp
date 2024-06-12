@@ -259,6 +259,7 @@ void initializeInstructions()
 
     g_instructions[0x2F]._instType = IN_CPL;
 
+    //0x3X
     g_instructions[0x30]._instType = IN_JR;
     g_instructions[0x30]._addrMode = AM_D8;
     g_instructions[0x30]._regType0 = RT_NONE;
@@ -1022,7 +1023,7 @@ void initializeInstructions()
     g_instructions[0xCA]._addrMode = AM_D16;
     g_instructions[0xCA]._regType0 = RT_NONE;
     g_instructions[0xCA]._regType1 = RT_NONE;
-    g_instructions[0xCA]._conditionType = CT_Z;
+    g_instructions[0xCA]._conditionType = CT_Z; // todo : check if this is correct
 
     g_instructions[0xCB]._instType = IN_CB;
     g_instructions[0xCB]._addrMode = AM_D8;

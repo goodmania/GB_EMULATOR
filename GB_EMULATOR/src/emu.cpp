@@ -70,14 +70,13 @@ void Emu::terminate()
     delete _cpu;
     delete _cart;
     delete _dma;
+    delete _ppu;
     delete _ui;
     delete _gamepad;
     delete _io;
 }
 
 void* Emu::cpuRun(void* p) {
-    _cpu->initialize();
-
     while (_emuContext->_running) {
         if (_emuContext->_paused) {
             delay(10);
@@ -88,7 +87,6 @@ void* Emu::cpuRun(void* p) {
             printf("CPU Stopped\n");
             return 0;
         }
-        _emuContext->_ticks++;
     }
     return 0;
 }
@@ -107,11 +105,14 @@ s32 Emu::emuRun(s32 argc, char** argv) {
 
     printf("Cart loaded..\n");
 
+    _timer->initialize();
+    _cpu->initialize();
+    _ppu->initialize();
+# if 1
     std::thread t1(&Emu::cpuRun, this, nullptr);
-    
     u32 prevFrame = 0;
     while (!_emuContext->_die) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::microseconds(1000));
         _ui->handleEvents();
 
         if (prevFrame != _ppu->getContext()->_currentFrame) {
@@ -120,6 +121,10 @@ s32 Emu::emuRun(s32 argc, char** argv) {
         prevFrame = _ppu->getContext()->_currentFrame;
     }
     t1.join();
+# else
+    cpuRun(nullptr);
+#endif
+    
     return 0;
 }
 

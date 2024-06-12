@@ -18,6 +18,6 @@ void Dbg::update()
 void Dbg::print()
 {
     if (_dbgMsg[0]) {
-        //printf("DBG: %s\n", dbg_msg);
+        printf("DBG: %s\n", _dbgMsg);
     }
 }

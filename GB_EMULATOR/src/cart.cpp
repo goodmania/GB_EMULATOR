@@ -171,7 +171,9 @@ bool Cart::load(char* cart)
     }
 
     printf("\t Checksum : %2.2X (%s)\n", _context._header->_checkSum, (x & 0xFF) ? "PASSED" : "FAILED");
-
+    if (_context._battery) {
+        batteryLoad();
+    }
     return true;
 }
 
@@ -413,6 +415,11 @@ u8 Cart::busRead(u16 address)
     }
     else if (address < 0xFF80) {
         //IO Registers...
+#if USE_LOG_TOOL
+        if (address == 0xFF44) {
+            return 0x90;
+		}
+#endif
         return io->read(address);
     }
     else if (address == 0xFFFF) {

@@ -9,8 +9,7 @@
 
 Ppu::Ppu()
 {
-    initialize();
-    initialize1();
+    
 }
 
 Ppu::~Ppu()
@@ -38,6 +37,7 @@ void Ppu::initialize()
 
     memset(_context._oamRam, 0, sizeof(_context._oamRam));
     memset(_context._videoBuffer, 0, YRES * XRES * sizeof(u32));
+    initialize1();
 }
 
 void Ppu::initialize1()
@@ -195,7 +195,6 @@ void Ppu::modeOam()
         _context._pfc._pushedX = 0;
         _context._pfc._fifoX = 0;
     }
-
     if (_context._lineTicks == 1) {
         //read oam on the first tick only...
         _context._lineSprites = 0;
@@ -214,7 +213,7 @@ void Ppu::modeXfer()
         _lcd->setLcdMode(MODE_HBLANK);
         
         if (_lcd->statInt(SS_HBLANK)) {
-            EmuGet()->getCpu()->requestInterrupt(IT_LCD_STAT);
+            //EmuGet()->getCpu()->requestInterrupt(IT_LCD_STAT); // todo : fix this. 02-interrupts Halt failed.
         }
     }
 }
@@ -230,7 +229,6 @@ void Ppu::modeVblank()
             lcdContext->_ly = 0;
             _context._windowLine = 0;
         }
-
         _context._lineTicks = 0;
     }
 }

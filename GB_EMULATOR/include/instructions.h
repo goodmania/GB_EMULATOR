@@ -108,12 +108,6 @@ enum InstructionType{
     IN_SET      /**< Set bit (CB prefix) instruction */
 };
 
-struct InstructionInfo {
-    InstructionType _instType;
-    AddressingMode _addrMode;
-    RegisterType _regType;
-};
-
 enum ConditionType{
     CT_NONE,
     CT_NZ,

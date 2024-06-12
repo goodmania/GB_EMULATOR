@@ -103,9 +103,9 @@ public:
     PpuContext* getContext() { return &_context; }
     Lcd* getLcd() { return _lcd; }
     void tick();
-
-private:
     void initialize();
+private:
+    
     void initialize1();
     bool windowVisible();
     void incrementLy();

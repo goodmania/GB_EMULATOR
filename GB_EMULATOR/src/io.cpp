@@ -17,11 +17,11 @@ u8 Io::read(u16 address)
     Timer* timer = emu->getTimer();
 
     if (address == 0xFF00) {
-        return gamepad->getOutput();
-    }
+        return gamepad->getOutput(); 
+    } 
 
     if (address == 0xFF01) {
-        return _serialData[0];
+        return _serialData[0]; 
     }
 
     if (address == 0xFF02) {

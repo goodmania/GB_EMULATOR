@@ -156,7 +156,6 @@ xcopy "$(SolutionDir)external\SDL2_TTF\lib\$(PlatformTarget)\*.dll" "$(OutDir)" 
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
-    <ClCompile Include="src\bus.cpp" />
     <ClCompile Include="src\cart.cpp" />
     <ClCompile Include="src\cpu.cpp" />
     <ClCompile Include="src\dbg.cpp" />
@@ -166,13 +165,13 @@ xcopy "$(SolutionDir)external\SDL2_TTF\lib\$(PlatformTarget)\*.dll" "$(OutDir)" 
     <ClCompile Include="src\instructions.cpp" />
     <ClCompile Include="src\io.cpp" />
     <ClCompile Include="src\lcd.cpp" />
+    <ClCompile Include="src\logger.cpp" />
     <ClCompile Include="src\ppu.cpp" />
     <ClCompile Include="src\ram.cpp" />
     <ClCompile Include="src\timer.cpp" />
     <ClCompile Include="src\ui.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="include\bus.h" />
     <ClInclude Include="include\cart.h" />
     <ClInclude Include="include\common.h" />
     <ClInclude Include="include\cpu.h" />
@@ -183,6 +182,7 @@ xcopy "$(SolutionDir)external\SDL2_TTF\lib\$(PlatformTarget)\*.dll" "$(OutDir)" 
     <ClInclude Include="include\instructions.h" />
     <ClInclude Include="include\io.h" />
     <ClInclude Include="include\lcd.h" />
+    <ClInclude Include="include\logger.h" />
     <ClInclude Include="include\ppu.h" />
     <ClInclude Include="include\ram.h" />
     <ClInclude Include="include\timer.h" />

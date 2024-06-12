@@ -13,6 +13,6 @@ public:
 	u8 hramRead(u16 address);
 	void hramWrite(u16 address, u8 value);
 private:
-	u8 _wram[0x2000]; //作業 RAM (WRAM)
-	u8 _hram[0x80]; // FF80	FFFE 上位 RAM (HRAM)	スタック用の領域。
+	u8 _wram[0x2000] = {}; //作業 RAM (WRAM)
+	u8 _hram[0x80] = {}; // FF80	FFFE 上位 RAM (HRAM)	スタック用の領域。
 };
