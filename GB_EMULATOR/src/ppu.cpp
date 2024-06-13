@@ -213,7 +213,7 @@ void Ppu::modeXfer()
         _lcd->setLcdMode(MODE_HBLANK);
         
         if (_lcd->statInt(SS_HBLANK)) {
-            //EmuGet()->getCpu()->requestInterrupt(IT_LCD_STAT); // todo : fix this. 02-interrupts Halt failed.
+    //        EmuGet()->getCpu()->requestInterrupt(IT_LCD_STAT); // todo : fix this. 02-interrupts Halt failed.
         }
     }
 }

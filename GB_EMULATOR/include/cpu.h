@@ -5,7 +5,7 @@
 #include "instructions.h"
 
 #define CPU_DEBUG 0
-#define USE_LOG_TOOL 1
+#define USE_LOG_TOOL 0
 
 class Emu;
 class Timer;

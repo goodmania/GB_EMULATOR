@@ -374,6 +374,7 @@ const char* Cart::cartTypeName()
 
 u8 Cart::busRead(u16 address)
 {
+
     Emu* emu = EmuGet();
     Cpu* cpu = emu->getCpu();
     Dma* dma = emu->getDma();

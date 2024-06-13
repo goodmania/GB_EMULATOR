@@ -177,17 +177,6 @@ bool Cpu::step()
         EmuGet()->emuCycles(1);
         fetchData();
 
-        if (_context._regs._h == 0xDB && _context._regs._l == 0xED) {
-            //printf("DBED: %02X\n", _context._memDest);
-        }
-        if (_context._memDest == 0xDBED) {
-            //printf("DBED: %02X\n", _context._memDest);
-        }
-
-        if (_context._regs._pc == 0xC69D) {
-            printf("A1C6\n");
-        }
-
 #if CPU_DEBUG
         char flags[16];
         sprintf_s(flags, "%c%c%c%c",
@@ -310,10 +299,6 @@ void Cpu::fetchData()
         if (_context._memDest < 0x100) {
             _context._memDest |= 0xFF00;
         }
-
-        if (_context._curInst->_regType1 == RT_C) {
-            
-        }
         return;
     }
 
@@ -322,10 +307,6 @@ void Cpu::fetchData()
         if (addr < 0x100) {
             addr |= 0xFF00;
         }
-        if (_context._curInst->_regType1 == RT_C) {
-            
-        }
-
         _context._fetchedData = cart->busRead(addr);
         EmuGet()->emuCycles(1);
         return;
@@ -410,7 +391,7 @@ void Cpu::fetchData()
         _context._memDest = readRegister(_context._curInst->_regType0);
         _context._destIsMem = true;
         _context._fetchedData = cart->busRead(readRegister(_context._curInst->_regType0));
-        EmuGet()->emuCycles(1);
+        //EmuGet()->emuCycles(1);
         return;
 
     case AM_R_A16: {
@@ -424,9 +405,6 @@ void Cpu::fetchData()
 
         _context._regs._pc += 2;
         _context._fetchedData = cart->busRead(addr);
-        if (_context._fetchedData == 0xDC && _context._regs._a == 0x14) {
-            printf("a\n"); //FF91 をフェッチ
-		}
 		
         EmuGet()->emuCycles(1);
 
@@ -479,7 +457,7 @@ void Cpu::procCb(CpuContext* ctx) {
     EmuGet()->emuCycles(1);
 
     if (regType == RT_HL) {
-        EmuGet()->emuCycles(2);
+        //EmuGet()->emuCycles(2);
     }
 
     switch (bitOp) {
@@ -830,21 +808,20 @@ void Cpu::procPush(CpuContext* ctx) {
 
 void Cpu::procInc(CpuContext* ctx) {
     u16 val = (readRegister(ctx->_curInst->_regType0) + 1);
-
     if (is16Bit(ctx->_curInst->_regType0)) {
-        EmuGet()->emuCycles(1);
+        //EmuGet()->emuCycles(1);
     }
 
     if (ctx->_curInst->_regType0 == RT_HL && ctx->_curInst->_addrMode == AM_MR) {
         val = EmuGet()->getCart()->busRead(readRegister(RT_HL)) + 1;
         val &= 0xFF;
+        EmuGet()->emuCycles(1);
         EmuGet()->getCart()->busWrite(readRegister(RT_HL), val);
     }
     else {
         setRegister(ctx->_curInst->_regType0, val);
         val = readRegister(ctx->_curInst->_regType0);
     }
-
     if ((ctx->_curOpcode & 0x03) == 0x03) {
         return;
     }
@@ -856,18 +833,21 @@ void Cpu::procDec(CpuContext* ctx) {
     u16 val = readRegister(ctx->_curInst->_regType0) - 1;
 
     if (is16Bit(ctx->_curInst->_regType0)) {
-        EmuGet()->emuCycles(1);
+        //EmuGet()->emuCycles(1);
     }
-
+    
     if (ctx->_curInst->_regType0 == RT_HL && ctx->_curInst->_addrMode == AM_MR) {
-        val = EmuGet()->getCart()->busRead(readRegister(RT_HL)) - 1;
-        EmuGet()->getCart()->busWrite(readRegister(RT_HL), val);
+        u16 reg = readRegister(RT_HL);
+        val = EmuGet()->getCart()->busRead(reg) - 1;
+        EmuGet()->emuCycles(1);
+        EmuGet()->getCart()->busWrite(reg, val);
+        
     }
     else {
         setRegister(ctx->_curInst->_regType0, val);
         val = readRegister(ctx->_curInst->_regType0);
     }
-
+    
     if ((ctx->_curOpcode & 0x0B) == 0x0B) {
         return;
     }
