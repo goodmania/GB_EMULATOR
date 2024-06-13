@@ -45,8 +45,8 @@ void Emu::initialize()
     _ppu = new Ppu;
     _ram = new Ram;
     _dma = new Dma;
-    _ui = new Ui;
     _gamepad = new Gamepad;
+    _ui = new Ui;
     _io = new Io;
 
     if (_emuContext)
@@ -104,7 +104,7 @@ s32 Emu::emuRun(s32 argc, char** argv) {
     }
 
     printf("Cart loaded..\n");
-
+    _ui->initialize();
     _timer->initialize();
     _cpu->initialize();
     _ppu->initialize();
@@ -112,7 +112,8 @@ s32 Emu::emuRun(s32 argc, char** argv) {
     std::thread t1(&Emu::cpuRun, this, nullptr);
     u32 prevFrame = 0;
     while (!_emuContext->_die) {
-        std::this_thread::sleep_for(std::chrono::microseconds(1000));
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+
         _ui->handleEvents();
 
         if (prevFrame != _ppu->getContext()->_currentFrame) {

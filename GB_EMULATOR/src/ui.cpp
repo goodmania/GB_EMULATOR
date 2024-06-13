@@ -9,7 +9,7 @@
 #include <SDL_ttf.h>
 
 Ui::Ui() {
-    initialize();
+    
 }
 
 void Ui::initialize()
@@ -61,6 +61,15 @@ void Ui::initialize()
     s32 x, y;
     SDL_GetWindowPosition(_sdlWindow, &x, &y);
     SDL_SetWindowPosition(_sdlDebugWindow, x + SCREEN_WIDTH + 10, y);
+
+    onKey(false, SDLK_z);
+    onKey(false, SDLK_x);
+    onKey(false, SDLK_RETURN);
+    onKey(false, SDLK_TAB);
+    onKey(false, SDLK_UP);
+    onKey(false, SDLK_DOWN);
+    onKey(false, SDLK_LEFT);
+    onKey(false, SDLK_RIGHT);
 }
 
 void Ui::handleEvents()
@@ -68,12 +77,12 @@ void Ui::handleEvents()
     SDL_Event e;
     while (SDL_PollEvent(&e) > 0)
     {
-        if (e.type == SDL_KEYDOWN) {
-            onKey(true, e.key.keysym.sym);
-        }
-
         if (e.type == SDL_KEYUP) {
             onKey(false, e.key.keysym.sym);
+        }
+
+        if (e.type == SDL_KEYDOWN) {
+            onKey(true, e.key.keysym.sym);
         }
 
         if (e.type == SDL_WINDOWEVENT && e.window.event == SDL_WINDOWEVENT_CLOSE) {
@@ -101,7 +110,7 @@ void Ui::update()
     SDL_Rect rc;
     rc.x = rc.y = 0;
     rc.w = rc.h = 2048;
-    ;
+    
     u32* video_buffer = EmuGet()->getPpu()->getContext()->_videoBuffer;
 
     for ( s32 lineNum = 0; lineNum < YRES; lineNum++) {
